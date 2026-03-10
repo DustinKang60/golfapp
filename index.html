@@ -20,7 +20,7 @@ body { font-family: 'Noto Sans KR', sans-serif; color: #f0ede8; }
 input, select, textarea { font-size: 16px; font-family: 'Noto Sans KR', sans-serif; -webkit-appearance: none; }
 button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none; }
 
-/* ===== CSS 변수 ===== */
+/* ===== CSS 변수 — 다크모드 (기본) ===== */
 :root {
   --bg:      #0a0a0a;
   --dark:    #111111;
@@ -39,6 +39,23 @@ button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
   --topbar-h: 56px;
   --tabbar-h: 60px;
 }
+/* ===== 라이트모드 ===== */
+body.light-mode {
+  --bg:      #f5f2ec;
+  --dark:    #ffffff;
+  --card:    #ffffff;
+  --card2:   #f0ede6;
+  --border:  #ddd8cc;
+  --white:   #1a1a1a;
+  --gray:    #666660;
+  --gray2:   #999990;
+}
+body.light-mode { background: #f5f2ec; color: #1a1a1a; }
+body.light-mode .topbar { background: #ffffff; }
+body.light-mode .tabbar { background: rgba(245,242,236,0.97); }
+body.light-mode .score-table th { background: rgba(201,168,76,0.15); }
+body.light-mode .warn-box { background: rgba(224,85,85,0.05); }
+body.light-mode .info-box { background: rgba(201,168,76,0.08); }
 
 /* ===== 앱 컨테이너 ===== */
 #app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
@@ -105,7 +122,7 @@ button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
   align-items: center;
   justify-content: center;
   gap: 2px;
-  font-size: 10px;
+  font-size: 11px;
   color: var(--gray2);
   letter-spacing: 0.5px;
   background: none;
@@ -113,7 +130,7 @@ button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
   padding: 8px 0;
 }
 .tab-item.active { color: var(--gold); }
-.tab-icon { font-size: 19px; line-height: 1; }
+.tab-icon { font-size: 22px; line-height: 1; }
 
 /* ===== 공통 버튼 ===== */
 .btn-gold {
@@ -146,7 +163,7 @@ button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
 
 /* ===== 입력 필드 ===== */
 .input-group { margin-bottom: 14px; }
-.input-label { font-size: 11px; color: var(--gray); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.input-label { font-size: 12px; color: var(--gray); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
 .input-field {
   width: 100%; padding: 13px 14px;
   background: var(--card);
@@ -162,7 +179,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 
 /* ===== 섹션 타이틀 ===== */
 .section-title {
-  font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
   color: var(--gold); margin: 16px 0 10px;
   display: flex; align-items: center; gap: 8px;
 }
@@ -171,7 +188,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 /* ===== 칩 ===== */
 .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 .chip {
-  padding: 7px 14px; border-radius: 20px; font-size: 13px;
+  padding: 8px 16px; border-radius: 20px; font-size: 14px;
   border: 1px solid var(--border); background: var(--card); color: var(--gray);
 }
 .chip.active { border-color: var(--gold); background: rgba(201,168,76,0.12); color: var(--gold2); }
@@ -184,7 +201,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .divider { height: 1px; background: var(--border); margin: 12px 0; }
 
 /* ===== 배지 ===== */
-.badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+.badge { padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; }
 .badge-gold { background: rgba(201,168,76,0.15); color: var(--gold2); border: 1px solid rgba(201,168,76,0.3); }
 .badge-green { background: rgba(76,175,114,0.15); color: var(--green); border: 1px solid rgba(76,175,114,0.3); }
 .badge-red   { background: rgba(224,85,85,0.15);  color: var(--red);   border: 1px solid rgba(224,85,85,0.3); }
@@ -258,11 +275,11 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 
 .round-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
 .round-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-.round-course { font-size: 15px; font-weight: 500; color: var(--white); }
-.round-info { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.round-course { font-size: 16px; font-weight: 500; color: var(--white); }
+.round-info { font-size: 12px; color: var(--gray); margin-top: 2px; }
 .round-score { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--gold); text-align: right; }
 .round-meta { display: flex; gap: 6px; flex-wrap: wrap; }
-.round-tag { font-size: 11px; color: var(--gray); background: var(--card2); padding: 3px 8px; border-radius: 6px; }
+.round-tag { font-size: 12px; color: var(--gray); background: var(--card2); padding: 4px 9px; border-radius: 6px; }
 .empty-state { text-align: center; padding: 60px 20px; color: var(--gray2); }
 .empty-icon { font-size: 48px; margin-bottom: 14px; }
 .empty-text { font-size: 14px; line-height: 1.8; }
@@ -314,12 +331,12 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 
 .stepper-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
 .stepper-info { flex: 1; }
-.stepper-name { font-size: 14px; color: var(--white); font-weight: 500; }
-.stepper-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.stepper-name { font-size: 15px; color: var(--white); font-weight: 500; }
+.stepper-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
 .stepper-controls { display: flex; align-items: center; gap: 12px; }
-.step-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--card2); border: 1px solid var(--border); font-size: 20px; color: var(--gold); display: flex; align-items: center; justify-content: center; }
-.step-val { font-size: 22px; font-weight: 700; color: var(--white); min-width: 28px; text-align: center; }
-.score-rel { font-size: 10px; padding: 2px 6px; border-radius: 8px; margin-top: 2px; text-align: center; }
+.step-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--card2); border: 1px solid var(--border); font-size: 22px; color: var(--gold); display: flex; align-items: center; justify-content: center; }
+.step-val { font-size: 24px; font-weight: 700; color: var(--white); min-width: 30px; text-align: center; }
+.score-rel { font-size: 11px; padding: 2px 7px; border-radius: 8px; margin-top: 2px; text-align: center; }
 .rel-eagle  { background: rgba(85,136,204,0.2);  color: var(--blue);  border: 1px solid rgba(85,136,204,0.3); }
 .rel-birdie { background: rgba(76,175,114,0.2);  color: var(--green); border: 1px solid rgba(76,175,114,0.3); }
 .rel-par    { background: rgba(136,136,128,0.15); color: var(--gray);  border: 1px solid rgba(136,136,128,0.2); }
@@ -367,8 +384,8 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .settings-row:last-child { border-bottom: none; }
 .settings-left { display: flex; align-items: center; gap: 12px; }
 .settings-icon { width: 34px; height: 34px; border-radius: 9px; background: rgba(201,168,76,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-.settings-name { font-size: 14px; color: var(--white); }
-.settings-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+.settings-name { font-size: 15px; color: var(--white); }
+.settings-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
 .toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--card2); border: 1px solid var(--border); position: relative; flex-shrink: 0; }
 .toggle.on { background: rgba(201,168,76,0.25); border-color: var(--gold); }
 .toggle-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--gray2); position: absolute; top: 2px; left: 3px; transition: left 0.2s, background 0.2s; }
@@ -377,17 +394,17 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .companion-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
 .companion-left { display: flex; align-items: center; gap: 10px; }
 .companion-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--gold2); font-weight: 700; flex-shrink: 0; }
-.companion-name { font-size: 14px; color: var(--white); }
-.companion-hdcp { font-size: 11px; color: var(--gray); margin-top: 1px; }
+.companion-name { font-size: 15px; color: var(--white); }
+.companion-hdcp { font-size: 12px; color: var(--gray); margin-top: 1px; }
 .del-btn { font-size: 18px; color: var(--gray2); background: none; border: none; padding: 6px; }
 
 .warn-box { background: rgba(224,85,85,0.07); border: 1px solid rgba(224,85,85,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
-.warn-title { font-size: 12px; font-weight: 700; color: #e07070; margin-bottom: 4px; }
-.warn-text { font-size: 11px; color: #aa6060; line-height: 1.6; }
+.warn-title { font-size: 13px; font-weight: 700; color: #e07070; margin-bottom: 4px; }
+.warn-text { font-size: 12px; color: #aa6060; line-height: 1.6; }
 .info-box { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
-.info-title { font-size: 11px; color: var(--gold); font-weight: 600; margin-bottom: 3px; }
-.info-text { font-size: 11px; color: #887750; line-height: 1.6; }
-.backup-time { font-size: 11px; color: var(--gray2); text-align: center; margin-top: 6px; margin-bottom: 12px; letter-spacing: 0.5px; }
+.info-title { font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 3px; }
+.info-text { font-size: 12px; color: #887750; line-height: 1.6; }
+.backup-time { font-size: 12px; color: var(--gray2); text-align: center; margin-top: 6px; margin-bottom: 12px; letter-spacing: 0.5px; }
 
 /* ===== AI 로딩 ===== */
 .ai-loading { text-align: center; padding: 20px; }
@@ -1192,7 +1209,12 @@ function searchClub() {
 
   fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': '',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1000,
@@ -1221,14 +1243,18 @@ function searchClub() {
   });
 }
 
+// 검색결과 임시 저장 (onclick JSON 충돌 방지)
+var searchResultClubs = [];
+
 function renderSearchResults(clubs, isAI) {
+  searchResultClubs = clubs;
   var html = '';
-  clubs.forEach(function(club) {
-    html += '<div class="list-card" onclick="selectClub(\''+esc(JSON.stringify(club).replace(/'/g,"\\'"))+'\''+')">'
+  clubs.forEach(function(club, idx) {
+    html += '<div class="list-card" onclick="selectClub('+idx+')">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;">'
       +'<div>'
-      +'<div style="font-size:15px;color:var(--white);font-weight:500;">'+esc(club.name)+'</div>'
-      +'<div style="font-size:11px;color:var(--gray);margin-top:2px;">'+esc(club.region||'')
+      +'<div style="font-size:16px;color:var(--white);font-weight:500;">'+esc(club.name)+'</div>'
+      +'<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+esc(club.region||'')
         +(club.courses?' · '+club.courses.length+'개 코스':'')+'</div>'
       +(isAI?'<span class="ai-badge">✨ AI 제공 — 확인 후 저장</span>':'')
       +'</div>'
@@ -1239,10 +1265,10 @@ function renderSearchResults(clubs, isAI) {
   document.getElementById('manual-add-btn').classList.remove('hidden');
 }
 
-function selectClub(jsonStr) {
-  try {
-    curClub = JSON.parse(jsonStr);
-  } catch(e) { return; }
+function selectClub(idx) {
+  var club = searchResultClubs[idx];
+  if (!club) return;
+  curClub = club;
   showScreen('course');
   renderCourseScreen();
 }
@@ -1806,9 +1832,9 @@ function renderAnalysis() {
    설정
    ============================================================ */
 function renderSettings() {
+  var isDark = !document.body.classList.contains('light-mode');
   var lastBackup = settings.lastBackup || null;
   var html = '';
-
   // 내 정보
   html += '<div class="section-title">내 정보</div>';
   html += '<div class="settings-block">'
@@ -1834,13 +1860,12 @@ function renderSettings() {
   });
   html += '<button class="btn-outline" style="margin-bottom:16px;padding:10px;font-size:13px;" onclick="openAddCompanion()">+ 동반자 추가</button>';
 
-  // 화면 설정
   html += '<div class="section-title">화면 설정</div>';
   html += '<div class="settings-block">'
     +'<div class="settings-row">'
     +'<div class="settings-left"><div class="settings-icon">🌙</div>'
-    +'<div><div class="settings-name">다크모드</div><div class="settings-sub">검정/골드 테마</div></div></div>'
-    +'<div class="toggle on"><div class="toggle-dot"></div></div>'
+    +'<div><div class="settings-name">다크모드</div><div class="settings-sub">'+(isDark?'검정/골드 테마 (현재)':'라이트 테마 (현재)')+'</div></div></div>'
+    +'<div class="toggle '+(isDark?'on':'')+'" onclick="toggleDarkMode()" style="cursor:pointer;"><div class="toggle-dot"></div></div>'
     +'</div>'
     +'<div class="settings-row">'
     +'<div class="settings-left"><div class="settings-icon">🌡️</div>'
@@ -1912,6 +1937,17 @@ function deleteCompanion(idx) {
     saveCompanionsData(list);
     renderSettings();
   }
+}
+
+/* ============================================================
+   다크모드 토글
+   ============================================================ */
+function toggleDarkMode() {
+  var isLight = document.body.classList.toggle('light-mode');
+  var s = Object.assign({}, settings, { darkMode: !isLight });
+  saveSettingsData(s);
+  renderSettings();
+  showToast(isLight ? '☀️ 라이트모드로 변경됨' : '🌙 다크모드로 변경됨');
 }
 
 /* ============================================================
@@ -2017,6 +2053,11 @@ function searchRecords() {
   settings   = loadSettings();
   savedClubs = loadClubs();
   companions = loadCompanions();
+
+  // 다크모드 설정 복원 (기본값: 다크모드)
+  if (settings.darkMode === false) {
+    document.body.classList.add('light-mode');
+  }
 
   // IndexedDB 자동복구 (라운드 없을 때만)
   if (rounds.length === 0) {
