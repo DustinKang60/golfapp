@@ -148,8 +148,13 @@ body.light-mode .info-box { background: rgba(201,168,76,0.08); }
   padding: 8px 0;
 }
 .tab-item.active { color: var(--gold); }
+.tab-item.tab-new-round {
+  color: var(--gold2);
+}
 .tab-item.tab-new-round .tab-icon {
   color: var(--gold2);
+  font-size: 26px;
+  filter: drop-shadow(0 0 4px rgba(232,201,106,0.5));
 }
 .tab-icon { font-size: 22px; line-height: 1; }
 
@@ -894,6 +899,7 @@ var curHole     = 0;      // 현재 홀 인덱스 (0-based)
 var curScores   = [];     // 홀별 스코어 [{scores:[{name,score}]}]
 var curPlayers  = [];     // 이번 라운드 플레이어 이름 배열
 var curRoundInfo= {};     // 날짜/날씨/기온/티오프
+var orderedHoles= [];     // 실제 플레이 순서 홀 배열 (전반/후반에 따라 재배열)
 
 // 분석 범위
 var analysisMode = 'current'; // 'current' | 'all'
@@ -1780,7 +1786,6 @@ function startScoring() {
 
   // 홀 순서 결정 — 전반/후반 시작에 따라 재배열
   var holes = curCourse.holes ? curCourse.holes.slice() : [];
-  var orderedHoles;
   if (startHole === 'back' && holes.length === 18) {
     // 후반부터: 10~18번홀 → 1~9번홀
     orderedHoles = holes.slice(9).concat(holes.slice(0,9));
@@ -1814,7 +1819,7 @@ function renderHole() {
   document.getElementById('progress-fill').style.width = pct+'%';
   document.getElementById('progress-frac').textContent = (curHole+1)+'/'+total+'홀';
 
-  var hd = curCourse.holes ? curCourse.holes[curHole] : { no:curHole+1, par:4, yard:0, hc:0 };
+  var hd = orderedHoles[curHole] || { no:curHole+1, par:4, yard:0, hc:0 };
   document.getElementById('hole-num-big').textContent = hd.no || (curHole+1);
   document.getElementById('hole-par-val').textContent = 'Par '+hd.par;
   document.getElementById('hole-yard-val').textContent = hd.yard ? hd.yard+'y' : '–';
