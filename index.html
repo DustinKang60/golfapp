@@ -12,6 +12,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
 <title>골프일기</title>
 <style>
+/* ===== 시작 홀 선택 버튼 ===== */
+.start-hole-btn {
+  flex: 1;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--white);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.start-hole-btn.active {
+  border-color: var(--gold);
+  background: rgba(201,168,76,0.08);
+}
+.start-hole-btn .gray { color: var(--gray); }
+
 /* ===== 전역 리셋 ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 * { -webkit-tap-highlight-color: transparent; }
@@ -498,7 +516,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 </div>
 
 <!-- ============================================================
-     SCREEN 3: 골프장 검색
+     SCREEN 3: 골프장 선택
      ============================================================ -->
 <div class="screen" id="screen-search">
   <div class="topbar">
@@ -507,28 +525,25 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
     <div style="width:38px;"></div>
   </div>
   <div class="scroll-area">
-    <div class="section-title">국가 선택</div>
-    <div class="chips" id="search-country-chips">
-      <div class="chip active" onclick="selectSearchCountry('KR',this)">🇰🇷 한국</div>
-      <div class="chip" onclick="selectSearchCountry('JP',this)">🇯🇵 일본</div>
-      <div class="chip" onclick="selectSearchCountry('CA',this)">🇨🇦 캐나다</div>
-      <div class="chip" onclick="selectSearchCountry('PH',this)">🇵🇭 필리핀</div>
+    <!-- 내 골프장 목록 -->
+    <div class="section-title">내 골프장</div>
+    <div id="my-clubs-list">
+      <div style="color:var(--gray);font-size:13px;padding:8px 0 4px;">저장된 골프장이 없습니다.</div>
     </div>
-    <div class="section-title">골프장 검색</div>
-    <div class="search-bar">
-      <input class="search-input" id="club-search-input" type="text" placeholder="골프장 이름 입력..."/>
-      <button class="search-btn" onclick="searchClub()">🔍</button>
+
+    <!-- 새 골프장 추가 -->
+    <div class="section-title" style="margin-top:20px;">새 골프장 추가</div>
+    <div class="info-box" style="margin-bottom:12px;font-size:13px;line-height:1.7;color:var(--gray);">
+      Claude 대화창에서 골프장 이름을 알려주시면<br>
+      스코어카드 JSON을 생성해 드립니다.<br>
+      아래 붙여넣기 버튼으로 등록하세요.
     </div>
-    <div id="ai-loading-area" class="ai-loading hidden">
-      <div class="ai-spinner"></div>
-      <div class="ai-loading-text">AI가 스코어카드를 검색 중...</div>
-    </div>
-    <div id="search-results"></div>
-    <div id="manual-add-btn" class="list-card hidden" style="border-style:dashed;" onclick="openManualClub()">
+    <button class="btn-gold" onclick="openPasteClub()" style="margin-bottom:10px;">📋 JSON 붙여넣기로 등록</button>
+    <div class="list-card" style="border-style:dashed;margin-top:4px;" onclick="openManualClub()">
       <div style="display:flex;align-items:center;justify-content:space-between;">
         <div>
-          <div style="font-size:14px;color:var(--gray);">+ 직접 골프장 등록하기</div>
-          <div style="font-size:11px;color:var(--gray2);margin-top:2px;">검색이 안될 때 직접 입력</div>
+          <div style="font-size:14px;color:var(--gray);">✏️ 직접 입력으로 등록</div>
+          <div style="font-size:11px;color:var(--gray2);margin-top:2px;">홀별 파 수동 입력</div>
         </div>
         <div style="font-size:20px;color:var(--border);">›</div>
       </div>
@@ -548,7 +563,21 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
   <div class="scroll-area" id="course-scroll">
     <!-- JS로 렌더링 -->
   </div>
-  <div style="flex-shrink:0;padding:12px 16px 24px;">
+  <div style="flex-shrink:0;padding:10px 16px 24px;">
+    <!-- 시작 홀 선택 -->
+    <div class="section-title" style="margin-bottom:8px;">시작 홀</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="start-hole-btn active" id="btn-start-front" onclick="selectStartHole('front',this)">
+        <div style="font-size:18px;margin-bottom:2px;">1️⃣</div>
+        <div style="font-size:13px;font-weight:600;">전반부터</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">1번홀 → 18번홀</div>
+      </button>
+      <button class="start-hole-btn" id="btn-start-back" onclick="selectStartHole('back',this)">
+        <div style="font-size:18px;margin-bottom:2px;">🔟</div>
+        <div style="font-size:13px;font-weight:600;">후반부터</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">10번홀 → 9번홀</div>
+      </button>
+    </div>
     <button class="btn-gold" onclick="startWithCourse()">이 코스로 시작하기 ›</button>
   </div>
 </div>
@@ -764,6 +793,25 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 </div>
 
 <!-- ============================================================
+     오버레이: JSON 붙여넣기 등록
+     ============================================================ -->
+<div class="overlay hidden" id="overlay-paste-club" onclick="closePasteClub()">
+  <div class="bottom-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:6px;">📋 JSON 붙여넣기 등록</div>
+    <div style="font-size:12px;color:var(--gray);margin-bottom:12px;line-height:1.6;">
+      Claude가 제공한 골프장 JSON을<br>아래에 붙여넣고 등록 버튼을 누르세요.
+    </div>
+    <textarea class="input-field" id="paste-json-input" placeholder='{"clubName":"...","courses":[...]}' style="height:140px;font-size:12px;font-family:monospace;resize:none;" oninput="autoResize(this)"></textarea>
+    <div id="paste-json-error" style="color:var(--red);font-size:12px;margin-top:6px;display:none;"></div>
+    <div style="display:flex;gap:10px;margin-top:12px;">
+      <button class="btn-outline" style="flex:1;" onclick="closePasteClub()">취소</button>
+      <button class="btn-gold" style="flex:2;" onclick="savePastedClub()">등록하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      오버레이: 직접 골프장 등록
      ============================================================ -->
 <div class="overlay hidden" id="overlay-manual-club" onclick="closeManualClub()">
@@ -957,6 +1005,14 @@ function showScreen(name) {
   if (name === 'analysis') { renderAnalysis(); }
   if (name === 'settings') { renderSettings(); }
   if (name === 'new-round'){ renderRecentClubs(); }
+  if (name === 'search')   { renderMyClubsList(); }
+  if (name === 'course')   {
+    // 시작홀 버튼 초기화 (항상 전반부터)
+    startHole = 'front';
+    document.querySelectorAll('.start-hole-btn').forEach(function(b){ b.classList.remove('active'); });
+    var frontBtn = document.getElementById('btn-start-front');
+    if (frontBtn) frontBtn.classList.add('active');
+  }
   if (name !== 'main' && name !== 'splash') {
     history.pushState({ screen: name }, '');
   }
@@ -966,7 +1022,7 @@ function showScreen(name) {
    뒤로가기 처리
    ============================================================ */
 window.addEventListener('popstate', function() {
-  var overlays = ['overlay-summary','overlay-manual-club','overlay-add-companion'];
+  var overlays = ['overlay-summary','overlay-manual-club','overlay-add-companion','overlay-paste-club'];
   for (var i=0; i<overlays.length; i++) {
     var ov = document.getElementById(overlays[i]);
     if (ov && !ov.classList.contains('hidden')) {
@@ -1153,121 +1209,129 @@ function quickSelectClub(name) {
     showScreen('course');
     renderCourseScreen();
   } else {
-    document.getElementById('club-search-input').value = name;
     showScreen('search');
   }
 }
 
 /* ============================================================
-   골프장 검색 (AI)
+   골프장 선택 화면 — 내 목록 렌더링
    ============================================================ */
-var searchCountry = 'KR';
-var countryNames = { KR:'한국', JP:'일본', CA:'캐나다', PH:'필리핀' };
-
-function selectSearchCountry(c, el) {
-  searchCountry = c;
-  document.querySelectorAll('#search-country-chips .chip').forEach(function(ch){ ch.classList.remove('active'); });
-  el.classList.add('active');
+function renderMyClubsList() {
+  var el = document.getElementById('my-clubs-list');
+  if (!el) return;
+  if (!savedClubs || !savedClubs.length) {
+    el.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:8px 0 4px;">저장된 골프장이 없습니다.</div>';
+    return;
+  }
+  var html = '';
+  savedClubs.forEach(function(club, idx) {
+    var courseCount = club.courses ? club.courses.length : 1;
+    html += '<div class="list-card" onclick="selectSavedClub('+idx+')" style="display:flex;align-items:center;justify-content:space-between;">'
+      +'<div>'
+      +'<div style="font-size:15px;color:var(--white);font-weight:500;">'+esc(club.name)+'</div>'
+      +'<div style="font-size:12px;color:var(--gray);margin-top:2px;">'
+        +esc(club.region||club.country||'')
+        +' · '+courseCount+'개 코스</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<span class="badge badge-gold">선택</span>'
+      +'<button onclick="event.stopPropagation();deleteClub('+idx+')" style="background:none;border:none;color:var(--gray2);font-size:16px;padding:4px 6px;">✕</button>'
+      +'</div>'
+      +'</div>';
+  });
+  el.innerHTML = html;
 }
 
-function searchClub() {
-  var q = document.getElementById('club-search-input').value.trim();
-  if (!q) { showToast('골프장 이름을 입력해주세요'); return; }
+function selectSavedClub(idx) {
+  var club = savedClubs[idx];
+  if (!club) return;
+  curClub = club;
+  showScreen('course');
+  renderCourseScreen();
+}
 
-  // 저장된 골프장에서 먼저 검색
-  var local = savedClubs.filter(function(c){
-    return c.name.indexOf(q) >= 0;
-  });
-  if (local.length) {
-    renderSearchResults(local, false);
+function deleteClub(idx) {
+  if (!confirm(savedClubs[idx].name + '을(를) 삭제할까요?')) return;
+  var clubs = savedClubs.slice();
+  clubs.splice(idx, 1);
+  saveClubsData(clubs);
+  renderMyClubsList();
+  showToast('삭제했습니다');
+}
+
+/* ============================================================
+   JSON 붙여넣기 등록
+   ============================================================ */
+function openPasteClub() {
+  document.getElementById('paste-json-input').value = '';
+  document.getElementById('paste-json-error').style.display = 'none';
+  document.getElementById('overlay-paste-club').classList.remove('hidden');
+}
+function closePasteClub() {
+  document.getElementById('overlay-paste-club').classList.add('hidden');
+}
+
+function savePastedClub() {
+  var raw = document.getElementById('paste-json-input').value.trim();
+  var errEl = document.getElementById('paste-json-error');
+  errEl.style.display = 'none';
+
+  // JSON 파싱 — 마크다운 코드블록 제거
+  var clean = raw.replace(/```json|```/g,'').trim();
+  var data;
+  try { data = JSON.parse(clean); } catch(e) {
+    errEl.textContent = 'JSON 형식 오류입니다. Claude에게 다시 요청해보세요.';
+    errEl.style.display = 'block';
     return;
   }
 
-  // AI 호출
-  document.getElementById('ai-loading-area').classList.remove('hidden');
-  document.getElementById('search-results').innerHTML = '';
-  document.getElementById('manual-add-btn').classList.add('hidden');
+  // 필드 정규화 (clubName 또는 name 모두 허용)
+  var club = {
+    id: 'paste_'+Date.now(),
+    name: data.clubName || data.name || '이름없음',
+    region: data.region || data.city || '',
+    country: data.country || '',
+    courses: []
+  };
 
-  var prompt = '골프장 이름: "'+q+'" ('+countryNames[searchCountry]+')\n\n'
-    +'이 골프장의 코스 정보와 스코어카드를 아래 JSON 형식으로만 응답하세요. 설명 없이 JSON만.\n\n'
-    +'{\n'
-    +'  "name": "골프장 정식명",\n'
-    +'  "region": "지역",\n'
-    +'  "country": "'+searchCountry+'",\n'
-    +'  "courses": [\n'
-    +'    {\n'
-    +'      "name": "코스명",\n'
-    +'      "par": 72,\n'
-    +'      "holes": [\n'
-    +'        {"no":1,"par":4,"yard":400,"hc":7},\n'
-    +'        ... 18홀 전부\n'
-    +'      ]\n'
-    +'    }\n'
-    +'  ]\n'
-    +'}\n\n'
-    +'코스가 여러개면 courses 배열에 모두 포함. 정보가 불확실한 yard/hc는 0으로.';
-
-  fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': '',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      messages: [{ role: 'user', content: prompt }]
-    })
-  })
-  .then(function(res){ return res.json(); })
-  .then(function(data) {
-    document.getElementById('ai-loading-area').classList.add('hidden');
-    var text = (data.content||[]).map(function(b){ return b.text||''; }).join('');
-    var clean = text.replace(/```json|```/g,'').trim();
-    try {
-      var club = JSON.parse(clean);
-      club.id = 'ai_'+Date.now();
-      club.aiGenerated = true;
-      renderSearchResults([club], true);
-    } catch(e) {
-      document.getElementById('search-results').innerHTML = '<div style="color:var(--gray);font-size:13px;padding:12px 0;">검색 결과가 없습니다.<br>직접 등록해보세요.</div>';
-      document.getElementById('manual-add-btn').classList.remove('hidden');
-    }
-  })
-  .catch(function() {
-    document.getElementById('ai-loading-area').classList.add('hidden');
-    document.getElementById('search-results').innerHTML = '<div style="color:var(--gray);font-size:13px;padding:12px 0;">검색 중 오류가 발생했습니다.</div>';
-    document.getElementById('manual-add-btn').classList.remove('hidden');
+  // courses 정규화
+  var rawCourses = data.courses || [];
+  if (!rawCourses.length) {
+    errEl.textContent = 'courses 배열이 없습니다.';
+    errEl.style.display = 'block';
+    return;
+  }
+  rawCourses.forEach(function(c) {
+    var holes = (c.holes||[]).map(function(h, i) {
+      return {
+        no:   h.hole || h.no || (i+1),
+        par:  h.par  || 4,
+        yard: h.yards || h.yard || 0,
+        hc:   h.si   || h.hc   || 0
+      };
+    });
+    club.courses.push({
+      name: c.courseName || c.name || '코스',
+      par:  c.par || holes.reduce(function(s,h){return s+h.par;},0),
+      holes: holes
+    });
   });
-}
 
-// 검색결과 임시 저장 (onclick JSON 충돌 방지)
-var searchResultClubs = [];
+  // 저장
+  var exists = savedClubs.findIndex(function(c){ return c.name===club.name; });
+  var clubs = savedClubs.slice();
+  if (exists >= 0) {
+    clubs[exists] = club; // 업데이트
+    showToast(club.name+' 업데이트 완료!');
+  } else {
+    clubs.push(club);
+    showToast(club.name+' 등록 완료!');
+  }
+  saveClubsData(clubs);
+  closePasteClub();
+  renderMyClubsList();
 
-function renderSearchResults(clubs, isAI) {
-  searchResultClubs = clubs;
-  var html = '';
-  clubs.forEach(function(club, idx) {
-    html += '<div class="list-card" onclick="selectClub('+idx+')">'
-      +'<div style="display:flex;align-items:center;justify-content:space-between;">'
-      +'<div>'
-      +'<div style="font-size:16px;color:var(--white);font-weight:500;">'+esc(club.name)+'</div>'
-      +'<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+esc(club.region||'')
-        +(club.courses?' · '+club.courses.length+'개 코스':'')+'</div>'
-      +(isAI?'<span class="ai-badge">✨ AI 제공 — 확인 후 저장</span>':'')
-      +'</div>'
-      +'<span class="badge badge-gold">선택</span>'
-      +'</div></div>';
-  });
-  document.getElementById('search-results').innerHTML = html;
-  document.getElementById('manual-add-btn').classList.remove('hidden');
-}
-
-function selectClub(idx) {
-  var club = searchResultClubs[idx];
-  if (!club) return;
+  // 바로 코스 선택으로 이동
   curClub = club;
   showScreen('course');
   renderCourseScreen();
@@ -1370,13 +1434,24 @@ function renderScorecard(idx) {
   curCourse = course;
 }
 
+/* ============================================================
+   시작 홀 선택 (전반/후반)
+   ============================================================ */
+var startHole = 'front'; // 'front' | 'back'
+
+function selectStartHole(type, el) {
+  startHole = type;
+  document.querySelectorAll('.start-hole-btn').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+}
+
 function startWithCourse() {
   if (!curClub || !curClub.courses) { showToast('코스를 선택해주세요'); return; }
   curCourse = curClub.courses[selectedCourseIdx];
-  // 골프장 저장
-  var exists = savedClubs.find(function(c){ return c.name===curClub.name; });
-  if (!exists) {
-    var clubs = savedClubs.slice();
+  // 골프장 저장 (없으면 추가, 있으면 패스)
+  var existsIdx = savedClubs.findIndex(function(c){ return c.name===curClub.name; });
+  var clubs = savedClubs.slice();
+  if (existsIdx < 0) {
     clubs.push(curClub);
     saveClubsData(clubs);
   }
@@ -1445,22 +1520,31 @@ function startScoring() {
     direct.split(',').forEach(function(n){ var t=n.trim(); if(t) selected.push(t); });
   }
 
-  curRoundInfo = { date:date, teetime:teetime, weather:curWeather, temp:temp?parseInt(temp):null };
+  curRoundInfo = { date:date, teetime:teetime, weather:curWeather, temp:temp?parseInt(temp):null, startHole:startHole };
   curPlayers = [player.name||'나'].concat(selected);
 
-  // 스코어 초기화
-  var holeCount = curCourse.holes ? curCourse.holes.length : 18;
-  curScores = [];
-  for (var i=0; i<holeCount; i++) {
-    var par = curCourse.holes ? curCourse.holes[i].par : 4;
-    var pscores = curPlayers.map(function(n){ return { name:n, score:par }; });
-    curScores.push({ holeNo:i+1, par:par, scores:pscores });
+  // 홀 순서 결정 — 전반/후반 시작에 따라 재배열
+  var holes = curCourse.holes ? curCourse.holes.slice() : [];
+  var orderedHoles;
+  if (startHole === 'back' && holes.length === 18) {
+    // 후반부터: 10~18번홀 → 1~9번홀
+    orderedHoles = holes.slice(9).concat(holes.slice(0,9));
+  } else {
+    orderedHoles = holes;
   }
+
+  // 스코어 초기화
+  curScores = [];
+  orderedHoles.forEach(function(h) {
+    var pscores = curPlayers.map(function(n){ return { name:n, score:h.par }; });
+    curScores.push({ holeNo:h.no, par:h.par, scores:pscores });
+  });
   curHole = 0;
 
   // 헤더 레이블
   document.getElementById('scoring-club-label').textContent = curClub.name;
-  document.getElementById('scoring-course-label').textContent = curCourse.name;
+  var startLabel = startHole==='back' ? curCourse.name+' (후반→전반)' : curCourse.name;
+  document.getElementById('scoring-course-label').textContent = startLabel;
 
   showScreen('scoring');
   renderHole();
