@@ -562,15 +562,10 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
     <div class="topbar-title small">골프장 선택</div>
     <div style="width:38px;"></div>
   </div>
-  <div class="scroll-area">
 
-    <!-- 내 골프장 목록 -->
-    <div class="section-title" style="margin-top:4px;">내 골프장</div>
-    <div id="my-clubs-list"></div>
-
-    <!-- ★ 전세계 골프장 검색 (API) ★ -->
-    <div class="section-title" style="margin-top:8px;">전세계 골프장 검색</div>
-
+  <!-- ★ 검색창 고정 영역 (스크롤 밖) ★ -->
+  <div style="padding:10px 16px 0; background:var(--bg);">
+    <div class="section-title" style="margin-top:0; margin-bottom:8px;">전세계 골프장 검색</div>
     <!-- 국가 선택 -->
     <div class="country-chip-row" id="country-select-chips">
       <div class="country-chip active" onclick="selectSearchCountry('KR',this)">🇰🇷 한국</div>
@@ -578,7 +573,6 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
       <div class="country-chip" onclick="selectSearchCountry('CA',this)">🇨🇦 캐나다</div>
       <div class="country-chip" onclick="selectSearchCountry('PH',this)">🇵🇭 필리핀</div>
     </div>
-
     <!-- 검색창 -->
     <div class="api-search-wrap">
       <input class="api-search-input" id="api-search-input"
@@ -586,17 +580,24 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
         onkeydown="if(event.key==='Enter') apiSearchClub()"/>
       <button class="api-search-btn" onclick="apiSearchClub()">🔍</button>
     </div>
+  </div>
+
+  <div class="scroll-area">
 
     <!-- 로딩 -->
     <div id="api-search-loading" class="hidden">
       <div class="ai-loading">
         <div class="ai-spinner"></div>
-        <div class="ai-loading-text">검색 중...</div>
+        <div class="ai-loading-text">스코어카드 불러오는 중...</div>
       </div>
     </div>
 
     <!-- 검색 결과 -->
     <div id="api-search-results"></div>
+
+    <!-- 내 골프장 목록 -->
+    <div class="section-title" style="margin-top:8px;">내 골프장</div>
+    <div id="my-clubs-list"></div>
 
   </div>
 </div>
@@ -1344,13 +1345,24 @@ function apiSearchClub(){
   document.getElementById('api-search-results').innerHTML='';
 
   var countryName=COUNTRY_CODES[searchCountry]||'';
-  var url=WORKER_URL+'/search?search_query='+encodeURIComponent(q)+(countryName?'&country='+encodeURIComponent(countryName):'');
+  // country 파라미터는 API에서 지원 안 함 → 검색어에 국가명 추가 후 클라이언트 필터링
+  var searchQ = countryName ? q+' '+countryName : q;
+  var url=WORKER_URL+'/search?search_query='+encodeURIComponent(searchQ);
 
   fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(data){
       document.getElementById('api-search-loading').classList.add('hidden');
       var courses=data.courses||[];
+      // 국가 필터: location.country 또는 location.state 로 클라이언트 필터링
+      if(countryName){
+        var countryLower=countryName.toLowerCase();
+        courses=courses.filter(function(c){
+          var loc=c.location||{};
+          var locText=((loc.country||'')+' '+(loc.state||'')).toLowerCase();
+          return locText.indexOf(countryLower)!==-1;
+        });
+      }
       if(!courses.length){
         document.getElementById('api-search-results').innerHTML=
           '<div style="color:var(--gray2);font-size:13px;padding:12px 4px;">검색 결과가 없습니다.<br><span style="font-size:11px;">다른 이름이나 국가로 다시 시도해 보세요.</span></div>';
@@ -1363,7 +1375,7 @@ function apiSearchClub(){
         if(!clubMap[key]) clubMap[key]=[];
         clubMap[key].push(c);
       });
-      var html='<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">'+courses.length+'개 코스 발견 — 선택하면 스코어카드를 자동으로 불러옵니다</div>';
+      var html='<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">'+courses.length+'개 코스 발견'+(countryName?' <span style="color:var(--gold);opacity:0.7;">['+countryName+' 필터]</span>':'')+' — 선택하면 스코어카드를 자동으로 불러옵니다</div>';
       Object.keys(clubMap).forEach(function(clubName){
         var list=clubMap[clubName];
         var first=list[0], loc=first.location||{};
