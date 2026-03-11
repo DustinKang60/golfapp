@@ -1352,9 +1352,9 @@ function apiSearchClub(){
       // 목록 렌더링
       var html='<div style="font-size:11px;color:var(--gray);padding:4px 0 8px;">검색 결과 '+data.results.length+'개 — 골프장을 선택하세요</div>';
       data.results.forEach(function(item){
-        var encodedUrl=encodeURIComponent(item.url);
+        var encodedId=encodeURIComponent(item.id);
         var encodedName=encodeURIComponent(item.name);
-        html+='<div class="api-result-item" onclick="apiSelectCourse(\''+encodedUrl+'\',\''+encodedName+'\')">'
+        html+='<div class="api-result-item" onclick="apiSelectCourse(\''+encodedId+'\',\''+encodedName+'\')">'
           +'<div><div class="api-result-name">'+esc(item.name)+'</div>'
           +(item.location?'<div class="api-result-sub">'+esc(item.location)+'</div>':'')
           +'</div>'
@@ -1369,8 +1369,8 @@ function apiSearchClub(){
     });
 }
 
-function apiSelectCourse(encodedUrl, encodedName){
-  var gpUrl=decodeURIComponent(encodedUrl);
+function apiSelectCourse(encodedId, encodedName){
+  var courseId=decodeURIComponent(encodedId);
   var name=decodeURIComponent(encodedName);
 
   var loadingEl=document.getElementById('api-search-loading');
@@ -1379,8 +1379,8 @@ function apiSelectCourse(encodedUrl, encodedName){
   loadingEl.querySelector('.ai-loading-text').textContent=name+' 스코어카드 불러오는 중...';
   resultsEl.innerHTML='';
 
-  // 2단계: 선택한 URL → 스코어카드
-  fetch(WORKER_URL+'?url='+encodeURIComponent(gpUrl))
+  // 2단계: ID → 스코어카드
+  fetch(WORKER_URL+'?id='+encodeURIComponent(courseId))
     .then(function(r){ return r.json(); })
     .then(function(data){
       loadingEl.classList.add('hidden');
@@ -1390,7 +1390,7 @@ function apiSelectCourse(encodedUrl, encodedName){
       }
       // 스코어카드 결과 표시 + 저장 버튼
       var encoded=encodeURIComponent(JSON.stringify(data));
-      var locStr=[data.region,data.country].filter(Boolean).join(' · ');
+      var locStr=data.location||'';
       var courseCount=data.courses?data.courses.length:0;
       var html='<div class="api-result-item" onclick="apiSaveClub(decodeURIComponent(\''+encoded+'\'))">'
         +'<div><div class="api-result-name">'+esc(data.club_name||name)+'</div>'
@@ -1425,7 +1425,7 @@ function apiSaveClub(dataJson){
   var club={
     id:      'api_'+Date.now(),
     name:    data.club_name||'골프장',
-    region:  data.region||'',
+    region:  data.location||data.region||'',
     country: data.country||'',
     courses: courses
   };
