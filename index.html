@@ -566,17 +566,11 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
   <!-- ★ 검색창 고정 영역 (스크롤 밖) ★ -->
   <div style="padding:10px 16px 0; background:var(--bg);">
     <div class="section-title" style="margin-top:0; margin-bottom:8px;">전세계 골프장 검색</div>
-    <!-- 국가 선택 -->
-    <div class="country-chip-row" id="country-select-chips">
-      <div class="country-chip active" onclick="selectSearchCountry('KR',this)">🇰🇷 한국</div>
-      <div class="country-chip" onclick="selectSearchCountry('JP',this)">🇯🇵 일본</div>
-      <div class="country-chip" onclick="selectSearchCountry('CA',this)">🇨🇦 캐나다</div>
-      <div class="country-chip" onclick="selectSearchCountry('PH',this)">🇵🇭 필리핀</div>
-    </div>
+    <div style="font-size:11px;color:var(--gray);margin-bottom:8px;">한국·일본·필리핀·미국·캐나다 등 전세계 검색 가능</div>
     <!-- 검색창 -->
     <div class="api-search-wrap">
       <input class="api-search-input" id="api-search-input"
-        type="text" placeholder="골프장 이름 검색..."
+        type="text" placeholder="골프장 이름 검색 (한글/영문)"
         onkeydown="if(event.key==='Enter') apiSearchClub()"/>
       <button class="api-search-btn" onclick="apiSearchClub()">🔍</button>
     </div>
@@ -875,11 +869,10 @@ var STORAGE_COMPANIONS= 'golfapp_companions_v1';
 /* ============================================================
    Cloudflare Worker URL
    ============================================================ */
-var WORKER_URL = 'https://lingering-truth-7fbc.jonghoon-kang.workers.dev';
+var WORKER_URL = 'https://lingering-truth-7fbc.jonghoon-kang.workers.dev'; // 캐나다/미국용 (레거시)
 
 /* 국가 코드 매핑 */
-var COUNTRY_CODES = { 'KR': 'South Korea', 'JP': 'Japan', 'CA': 'Canada', 'PH': 'Philippines' };
-var searchCountry = 'KR'; // 기본값: 한국
+var searchCountry = 'ALL';
 
 /* ============================================================
    앱 전역 상태
@@ -1342,52 +1335,22 @@ function apiSearchClub(){
   if(!q){ showToast('골프장 이름을 입력해주세요'); return; }
 
   document.getElementById('api-search-loading').classList.remove('hidden');
+  document.getElementById('api-search-loading').querySelector('.ai-loading-text').textContent='Claude가 스코어카드 검색 중...';
   document.getElementById('api-search-results').innerHTML='';
 
-  var countryName=COUNTRY_CODES[searchCountry]||'';
-  // country 파라미터는 API에서 지원 안 함 → 검색어에 국가명 추가 후 클라이언트 필터링
-  var searchQ = countryName ? q+' '+countryName : q;
-  var url=WORKER_URL+'/search?search_query='+encodeURIComponent(searchQ);
-
-  fetch(url)
+  fetch(WORKER_URL+'?q='+encodeURIComponent(q))
     .then(function(r){ return r.json(); })
     .then(function(data){
       document.getElementById('api-search-loading').classList.add('hidden');
-      var courses=data.courses||[];
-      // 국가 필터: location.country 또는 location.state 로 클라이언트 필터링
-      if(countryName){
-        var countryLower=countryName.toLowerCase();
-        courses=courses.filter(function(c){
-          var loc=c.location||{};
-          var locText=((loc.country||'')+' '+(loc.state||'')).toLowerCase();
-          return locText.indexOf(countryLower)!==-1;
-        });
-      }
-      if(!courses.length){
+      if(data.error){
         document.getElementById('api-search-results').innerHTML=
-          '<div style="color:var(--gray2);font-size:13px;padding:12px 4px;">검색 결과가 없습니다.<br><span style="font-size:11px;">다른 이름이나 국가로 다시 시도해 보세요.</span></div>';
+          '<div style="color:var(--gray2);font-size:13px;padding:12px 4px;">스코어카드를 찾지 못했습니다.<br><span style="font-size:11px;">골프장 이름을 더 정확하게 입력해 보세요.</span></div>';
         return;
       }
-      // club_name 기준 그룹핑
-      var clubMap={};
-      courses.forEach(function(c){
-        var key=c.club_name||c.course_name;
-        if(!clubMap[key]) clubMap[key]=[];
-        clubMap[key].push(c);
-      });
-      var html='<div style="font-size:11px;color:var(--gray);margin-bottom:8px;">'+courses.length+'개 코스 발견'+(countryName?' <span style="color:var(--gold);opacity:0.7;">['+countryName+' 필터]</span>':'')+' — 선택하면 스코어카드를 자동으로 불러옵니다</div>';
-      Object.keys(clubMap).forEach(function(clubName){
-        var list=clubMap[clubName];
-        var first=list[0], loc=first.location||{};
-        var locStr=[loc.city,loc.state,loc.country].filter(Boolean).join(', ');
-        // JSON 직렬화: 버튼에 데이터 저장
-        var encoded=encodeURIComponent(JSON.stringify(list));
-        html+='<div class="api-result-item" onclick="apiSelectClub(decodeURIComponent(\''+encoded+'\'))">'
-          +'<div><div class="api-result-name">'+esc(clubName)+'</div>'
-          +'<div class="api-result-sub">'+esc(locStr)+(list.length>1?' · '+list.length+'개 코스':'')+'</div></div>'
-          +'<div style="font-size:18px;color:var(--gold);">›</div>'
-          +'</div>';
-      });
+      var encoded=encodeURIComponent(JSON.stringify(data));
+      var locStr=[data.region,data.country].filter(Boolean).join(' · ');
+      var courseCount=data.courses?data.courses.length:0;
+      var html='<div class="api-result-item" onclick="apiSaveClub(decodeURIComponent(''+encoded+''))">'        +'<div><div class="api-result-name">'+esc(data.club_name||q)+'</div>'        +'<div class="api-result-sub">'+esc(locStr)+(courseCount?' · '+courseCount+'개 코스':'')+'</div></div>'        +'<div style="font-size:13px;color:var(--gold);padding:4px 8px;border:1px solid var(--gold);border-radius:20px;">저장</div>'        +'</div>';
       document.getElementById('api-search-results').innerHTML=html;
     })
     .catch(function(err){
@@ -1395,6 +1358,86 @@ function apiSearchClub(){
       showToast('❌ 검색 오류: '+err.message);
     });
 }
+
+
+function apiSaveClub(dataJson){
+  var data;
+  try { data=JSON.parse(dataJson); } catch(e){ showToast('오류'); return; }
+
+  var courses=(data.courses||[]).map(function(c){
+    return {
+      name: c.name||'코스',
+      par:  c.par||c.holes.reduce(function(s,h){return s+(h.par||4);},0),
+      holes: (c.holes||[]).map(function(h,i){
+        return { no:h.no||i+1, par:h.par||4, yard:h.yard||0, hc:h.hc||0 };
+      })
+    };
+  });
+
+  if(!courses.length){ showToast('❌ 스코어카드 데이터가 없습니다'); return; }
+
+  var club={
+    id:      'api_'+Date.now(),
+    name:    data.club_name||'골프장',
+    region:  data.region||'',
+    country: data.country||'',
+    courses: courses
+  };
+
+  var exists=savedClubs.findIndex(function(c){ return c.name===club.name; });
+  var clubs=savedClubs.slice();
+  if(exists>=0){ clubs[exists]=club; showToast('✅ '+club.name+' 업데이트! 아래 목록에서 선택하세요'); }
+  else { clubs.push(club); showToast('✅ '+club.name+' 저장됨! 아래 목록에서 선택하세요'); }
+  saveClubsData(clubs);
+  resetApiSearch();
+  document.getElementById('api-search-input').value='';
+  renderMyClubsList();
+  var scrollArea=document.querySelector('#screen-search .scroll-area');
+  if(scrollArea) scrollArea.scrollTop=0;
+}
+
+
+function resetApiSearch(){
+  document.getElementById('api-search-input').value='';
+  document.getElementById('api-search-results').innerHTML='';
+  document.getElementById('api-search-loading').classList.add('hidden');
+}
+
+function selectSearchCountry(code, el){
+  searchCountry=code;
+  document.querySelectorAll('.country-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function apiSearchClub(){
+  var q=document.getElementById('api-search-input').value.trim();
+  if(!q){ showToast('골프장 이름을 입력해주세요'); return; }
+
+  document.getElementById('api-search-loading').classList.remove('hidden');
+  document.getElementById('api-search-loading').querySelector('.ai-loading-text').textContent='Claude가 스코어카드 검색 중...';
+  document.getElementById('api-search-results').innerHTML='';
+
+  fetch(WORKER_URL+'?q='+encodeURIComponent(q))
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      document.getElementById('api-search-loading').classList.add('hidden');
+      if(data.error){
+        document.getElementById('api-search-results').innerHTML=
+          '<div style="color:var(--gray2);font-size:13px;padding:12px 4px;">스코어카드를 찾지 못했습니다.<br><span style="font-size:11px;">골프장 이름을 더 정확하게 입력해 보세요.</span></div>';
+        return;
+      }
+      var encoded=encodeURIComponent(JSON.stringify(data));
+      var locStr=[data.region,data.country].filter(Boolean).join(' · ');
+      var courseCount=data.courses?data.courses.length:0;
+      var html='<div class="api-result-item" onclick="apiSaveClub(decodeURIComponent(''+encoded+''))">'        +'<div><div class="api-result-name">'+esc(data.club_name||q)+'</div>'        +'<div class="api-result-sub">'+esc(locStr)+(courseCount?' · '+courseCount+'개 코스':'')+'</div></div>'        +'<div style="font-size:13px;color:var(--gold);padding:4px 8px;border:1px solid var(--gold);border-radius:20px;">저장</div>'        +'</div>';
+      document.getElementById('api-search-results').innerHTML=html;
+    })
+    .catch(function(err){
+      document.getElementById('api-search-loading').classList.add('hidden');
+      showToast('❌ 검색 오류: '+err.message);
+    });
+}
+
 
 function apiSelectClub(listJson){
   var list;
