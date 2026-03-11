@@ -1824,17 +1824,24 @@ function renderAnalysis(){
    ============================================================ */
 function renderSettings(){
   var isDark=!document.body.classList.contains('light-mode');
-  var lastBackup=settings.lastBackup||null;
   var distUnit=settings.distUnit||'yd';
   var html='';
-  html+='<div class="section-title">내 골프장 관리</div>';
+
+  // ── 골프장 추가 ──────────────────────────────────────────
+  html+='<div class="section-title">골프장 추가</div>';
+  html+='<button class="btn-gold" style="margin-bottom:16px;" onclick="importClubJSON()">📂 골프장 JSON 파일 업로드</button>';
+  html+='<input type="file" id="club-json-input" accept=".json" style="display:none;" onchange="handleClubJSONUpload(event)"/>';
+
+  // ── 내 정보 ───────────────────────────────────────────────
   html+='<div class="section-title">내 정보</div>'
     +'<div class="settings-block"><div class="settings-row">'
     +'<div class="settings-left"><div class="settings-icon">👤</div>'
     +'<div><div class="settings-name">'+(player.name||'이름 없음')+'</div>'
     +'<div class="settings-sub">'+(player.gender==='M'?'남성':'여성')+' · '+(player.age||'–')+'세 · 핸디캡 '+(player.hdcp||'–')+'</div></div></div>'
-    +'<button class="btn-ghost" style="font-size:12px;" onclick="showScreen(\'player\')">수정</button>'
+    +'<button class="btn-ghost" style="font-size:12px;" onclick="showScreen('player')">수정</button>'
     +'</div></div>';
+
+  // ── 단골 동반자 ───────────────────────────────────────────
   html+='<div class="section-title">단골 동반자</div>';
   if(!companions.length) html+='<div style="font-size:13px;color:var(--gray2);padding:8px 4px 4px;">등록된 동반자가 없습니다</div>';
   else companions.forEach(function(c,i){
@@ -1845,6 +1852,8 @@ function renderSettings(){
       +'<button class="del-btn" onclick="deleteCompanion('+i+')">✕</button></div>';
   });
   html+='<button class="btn-outline" style="margin-bottom:16px;padding:10px;font-size:13px;" onclick="openAddCompanion()">+ 동반자 추가</button>';
+
+  // ── 화면 설정 ─────────────────────────────────────────────
   html+='<div class="section-title">화면 설정</div>'
     +'<div class="settings-block">'
     +'<div class="settings-row"><div class="settings-left"><div class="settings-icon">🌙</div>'
@@ -1854,50 +1863,20 @@ function renderSettings(){
     +'<div class="settings-left"><div class="settings-icon">📏</div>'
     +'<div><div class="settings-name">거리 단위</div><div class="settings-sub">'+(distUnit==='yd'?'야드 (yd)':'미터 (m)')+'</div></div></div>'
     +'<div style="display:flex;gap:6px;">'
-    +'<button class="badge '+(distUnit==='yd'?'badge-gold':'badge-outline')+'" style="cursor:pointer;border:none;font-size:12px;padding:4px 10px;" onclick="setDistUnit(\'yd\')">yd</button>'
-    +'<button class="badge '+(distUnit==='m'?'badge-gold':'badge-outline')+'" style="cursor:pointer;border:none;font-size:12px;padding:4px 10px;" onclick="setDistUnit(\'m\')">m</button>'
+    +'<button class="badge '+(distUnit==='yd'?'badge-gold':'badge-outline')+'" style="cursor:pointer;border:none;font-size:12px;padding:4px 10px;" onclick="setDistUnit('yd')">yd</button>'
+    +'<button class="badge '+(distUnit==='m'?'badge-gold':'badge-outline')+'" style="cursor:pointer;border:none;font-size:12px;padding:4px 10px;" onclick="setDistUnit('m')">m</button>'
     +'</div></div></div>';
-  html+='<div class="section-title" style="margin-top:4px;">골프장 추가</div>'
-    +'<div class="info-box" style="margin-bottom:10px;">'
-    +'<div class="info-title">💡 골프장 추가 방법</div>'
-    +'<div class="info-text">1. ChatGPT 또는 Claude에게 아래 형식으로 요청하세요:<br><br>'
-    +'<span style="color:var(--gold2);">"○○골프클럽 스코어카드를 아래 JSON 형식으로 만들어줘:<br>{\"club_name\":\"이름\", \"region\":\"지역\", \"country\":\"KR\", \"courses\":[{\"name\":\"아웃코스\", \"par\":36, \"holes\":[{\"no\":1, \"par\":4, \"yard\":400, \"hc\":5}]}]}"</span><br><br>'
-    +'2. 받은 JSON을 파일로 저장 후 아래 버튼으로 업로드하세요.</div>'
-    +'</div>'
-    +'<button class="btn-gold" style="margin-bottom:16px;" onclick="importClubJSON()">📂 골프장 JSON 파일 업로드</button>'
-    +'<input type="file" id="club-json-input" accept=".json" style="display:none;" onchange="handleClubJSONUpload(event)"/>'
-    +'<div class="section-title" style="margin-top:4px;">내 골프장 목록</div>';
-  if(!savedClubs.length){
-    html+='<div style="font-size:13px;color:var(--gray2);padding:8px 4px 12px;">등록된 골프장이 없습니다</div>';
-  } else {
-    savedClubs.forEach(function(club, i){
-      html+='<div class="companion-item"><div class="companion-left">'
-        +'<div class="companion-avatar">⛳</div>'
-        +'<div><div class="companion-name">'+esc(club.name)+'</div>'
-        +'<div class="companion-hdcp">'+(club.region||club.country||'')+(club.courses?' · '+club.courses.length+'개 코스':'')+'</div>'
-        +'</div></div>'
-        +'<button class="del-btn" onclick="deleteClub('+i+')">✕</button></div>';
-    });
-  }
-  html+='<div style="height:8px;"></div>';
-  html+='<div class="section-title" style="margin-top:4px;">데이터 관리</div>'
-    +'<div class="warn-box"><div style="display:flex;align-items:flex-start;gap:10px;">'
-    +'<div style="font-size:20px;flex-shrink:0;">⚠️</div>'
-    +'<div><div class="warn-title">데이터 소실 주의</div>'
-    +'<div class="warn-text">앱 데이터는 휴대폰 내부에 저장됩니다.<br><b style="color:#e07070;">새 앱 설치 전 반드시 아래 버튼으로 백업하세요.</b></div>'
-    +'</div></div></div>'
-    +'<div class="info-box"><div class="info-title">💡 앱이 최신버전으로 안 보일 때</div>'
-    +'<div class="info-text">크롬 새로고침 버튼을 <b style="color:var(--gold2);">길게 누르기</b> → "캐시 비우기 및 강력 새로고침"</div></div>'
-    +'<button class="btn-gold" style="margin-bottom:6px;" onclick="exportData()">📤 기록 내보내기</button>'
-    +'<div class="backup-time">'+(lastBackup?'마지막 백업: '+lastBackup:'아직 백업하지 않았습니다')+'</div>'
-    +'<button class="btn-outline" style="margin-bottom:24px;" onclick="importData()">📥 기록 가져오기</button>'
-    +'<div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--gray2);letter-spacing:1px;">총 '+rounds.length+'개 라운드 · 골프일기 v1.1<br>작은앱공방 · 강종훈</div>';
+
+  // ── 데이터 관리 ───────────────────────────────────────────
+  html+='<div class="section-title">데이터 관리</div>'
+    +'<button class="btn-gold" style="margin-bottom:8px;" onclick="exportData()">📤 기록 내보내기</button>'
+    +'<button class="btn-outline" style="margin-bottom:16px;" onclick="importData()">📥 기록 가져오기</button>';
+
+  html+='<div style="text-align:center;font-size:11px;color:var(--gray2);padding:8px 0 24px;">총 '+rounds.length+'개 라운드 · 골프일기 v1.1<br>작은앱공방 · 강종훈</div>';
+
   document.getElementById('settings-scroll').innerHTML=html;
 }
 
-/* ============================================================
-   동반자 관리
-   ============================================================ */
 function openAddCompanion(){ document.getElementById('overlay-add-companion').classList.remove('hidden'); document.getElementById('new-companion-name').value=''; document.getElementById('new-companion-hdcp').value=''; }
 function closeAddCompanion(){ document.getElementById('overlay-add-companion').classList.add('hidden'); }
 function saveNewCompanion(){
