@@ -1353,8 +1353,9 @@ function apiSearchClub(){
       var html='<div style="font-size:11px;color:var(--gray);padding:4px 0 8px;">검색 결과 '+data.results.length+'개 — 골프장을 선택하세요</div>';
       data.results.forEach(function(item){
         var encodedId=encodeURIComponent(item.id);
+        var encodedSlug=encodeURIComponent(item.slug||'');
         var encodedName=encodeURIComponent(item.name);
-        html+='<div class="api-result-item" onclick="apiSelectCourse(\''+encodedId+'\',\''+encodedName+'\')">'
+        html+='<div class="api-result-item" onclick="apiSelectCourse(\''+encodedId+'\',\''+encodedName+'\',\''+encodedSlug+'\')">'
           +'<div><div class="api-result-name">'+esc(item.name)+'</div>'
           +(item.location?'<div class="api-result-sub">'+esc(item.location)+'</div>':'')
           +'</div>'
@@ -1369,9 +1370,10 @@ function apiSearchClub(){
     });
 }
 
-function apiSelectCourse(encodedId, encodedName){
+function apiSelectCourse(encodedId, encodedName, encodedSlug){
   var courseId=decodeURIComponent(encodedId);
   var name=decodeURIComponent(encodedName);
+  var slug=decodeURIComponent(encodedSlug||'');
 
   var loadingEl=document.getElementById('api-search-loading');
   var resultsEl=document.getElementById('api-search-results');
@@ -1379,16 +1381,18 @@ function apiSelectCourse(encodedId, encodedName){
   loadingEl.querySelector('.ai-loading-text').textContent=name+' 스코어카드 불러오는 중...';
   resultsEl.innerHTML='';
 
-  // 2단계: ID → 스코어카드
-  fetch(WORKER_URL+'?id='+encodeURIComponent(courseId))
+  // GolfCourseAPI(id) 시도 → 실패 시 Golfify(slug) fallback
+  var url = WORKER_URL+'?id='+encodeURIComponent(courseId);
+  if(slug) url += '&slug='+encodeURIComponent(slug);
+
+  fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(data){
       loadingEl.classList.add('hidden');
-      if(data.error){
-        resultsEl.innerHTML='<div style="color:var(--gray2);font-size:13px;padding:12px 4px;">스코어카드 데이터가 없습니다.</div>';
+      if(data.error || data.debug){
+        resultsEl.innerHTML='<div style="color:var(--gray2);font-size:13px;padding:12px 4px;">스코어카드 데이터가 없습니다.<br><span style="font-size:11px;">골프장에 홀 데이터가 없습니다.</span></div>';
         return;
       }
-      // 스코어카드 결과 표시 + 저장 버튼
       var encoded=encodeURIComponent(JSON.stringify(data));
       var locStr=data.location||'';
       var courseCount=data.courses?data.courses.length:0;
