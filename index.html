@@ -1350,7 +1350,12 @@ function apiSearchClub(){
       var encoded=encodeURIComponent(JSON.stringify(data));
       var locStr=[data.region,data.country].filter(Boolean).join(' · ');
       var courseCount=data.courses?data.courses.length:0;
-      var html='<div class="api-result-item" onclick="apiSaveClub(decodeURIComponent(''+encoded+''))">'        +'<div><div class="api-result-name">'+esc(data.club_name||q)+'</div>'        +'<div class="api-result-sub">'+esc(locStr)+(courseCount?' · '+courseCount+'개 코스':'')+'</div></div>'        +'<div style="font-size:13px;color:var(--gold);padding:4px 8px;border:1px solid var(--gold);border-radius:20px;">저장</div>'        +'</div>';
+      var encoded=encodeURIComponent(JSON.stringify(data));
+      var html='<div class="api-result-item" onclick="apiSaveClub(decodeURIComponent(\''+encoded+'\'))">'
+        +'<div><div class="api-result-name">'+esc(data.club_name||q)+'</div>'
+        +'<div class="api-result-sub">'+esc(locStr)+(courseCount?' · '+courseCount+'개 코스':'')+'</div></div>'
+        +'<div style="font-size:13px;color:var(--gold);padding:4px 8px;border:1px solid var(--gold);border-radius:20px;">저장</div>'
+        +'</div>';
       document.getElementById('api-search-results').innerHTML=html;
     })
     .catch(function(err){
