@@ -171,12 +171,12 @@ body.light-mode .info-box { background: rgba(201,168,76,0.08); }
   justify-content: center;
 }
 .tab-item.tab-new-round .tab-icon-wrap {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   background: linear-gradient(135deg, #a87820, #e8c96a);
-  border-radius: 14px;
-  box-shadow: 0 2px 12px rgba(201,168,76,0.35);
-  margin-top: -6px;
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  margin-top: -2px;
 }
 .tab-item.tab-new-round { color: var(--gold2); }
 .tab-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
@@ -1434,34 +1434,64 @@ function openRoundDetail(id) {
   overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.6);display:flex;flex-direction:column;overflow:hidden;';
 
   // 스코어카드 HTML 생성
+  // r.scores 구조: [{holeNo, par, scores:[{name, score}]}] (홀 배열)
   var scHtml = '';
   if (r.scores && r.scores.length) {
-    var playerCount = r.scores[0].scores ? r.scores[0].scores.length : 0;
-    // 홀 번호 행
-    scHtml += '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;">';
-    scHtml += '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:340px;">';
-    scHtml += '<thead><tr><th style="background:rgba(201,168,76,0.12);color:var(--gold);padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:10px;">홀</th>';
-    for (var i=1;i<=9;i++) scHtml += '<th style="background:rgba(201,168,76,0.12);color:var(--gold);padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:10px;">'+i+'</th>';
-    scHtml += '<th style="background:rgba(201,168,76,0.2);color:var(--gold2);padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:10px;">OUT</th>';
-    for (var i=10;i<=18;i++) scHtml += '<th style="background:rgba(201,168,76,0.12);color:var(--gold);padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:10px;">'+i+'</th>';
-    scHtml += '<th style="background:rgba(201,168,76,0.2);color:var(--gold2);padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:10px;">IN</th>';
-    scHtml += '<th style="background:rgba(201,168,76,0.2);color:var(--gold2);padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:10px;">TOT</th>';
-    scHtml += '</tr></thead><tbody>';
-    r.scores.forEach(function(ps) {
-      var pName = ps.name || '';
-      var pScores = ps.scores || [];
-      var out9 = pScores.slice(0,9).reduce(function(s,v){return s+(v||0);},0);
-      var in9  = pScores.slice(9,18).reduce(function(s,v){return s+(v||0);},0);
-      var tot  = out9 + in9;
-      scHtml += '<tr><td style="padding:5px 3px;text-align:center;border:1px solid var(--border);font-size:11px;color:var(--gold2);font-weight:600;">'+esc(pName)+'</td>';
-      for (var j=0;j<9;j++) scHtml += '<td style="padding:5px 3px;text-align:center;border:1px solid var(--border);">'+(pScores[j]||'-')+'</td>';
-      scHtml += '<td style="padding:5px 3px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold2);">'+out9+'</td>';
-      for (var j=9;j<18;j++) scHtml += '<td style="padding:5px 3px;text-align:center;border:1px solid var(--border);">'+(pScores[j]||'-')+'</td>';
-      scHtml += '<td style="padding:5px 3px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold2);">'+in9+'</td>';
-      scHtml += '<td style="padding:5px 3px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold3);">'+tot+'</td>';
-      scHtml += '</tr>';
+    var holes = r.scores; // 18홀 배열
+    // 플레이어 이름 추출
+    var pNames = (holes[0] && holes[0].scores) ? holes[0].scores.map(function(s){ return s.name; }) : [];
+
+    var thStyle = 'background:rgba(201,168,76,0.12);color:var(--gold);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
+    var thSumStyle = 'background:rgba(201,168,76,0.2);color:var(--gold2);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
+    var tdStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:11px;';
+    var tdSumStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold2);font-size:11px;';
+    var tdTotStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold3);font-size:11px;';
+
+    function buildHalf(startIdx, endIdx, sumLabel) {
+      var h = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px;">';
+      h += '<table style="width:100%;border-collapse:collapse;min-width:320px;">';
+      h += '<thead><tr><th style="'+thStyle+'">이름</th>';
+      for (var i=startIdx; i<endIdx; i++) {
+        h += '<th style="'+thStyle+'">'+(holes[i]?holes[i].holeNo:i+1)+'</th>';
+      }
+      h += '<th style="'+thSumStyle+'">'+sumLabel+'</th></tr></thead><tbody>';
+      // Par 행
+      h += '<tr><td style="'+tdStyle+';color:var(--gray2);">Par</td>';
+      for (var i=startIdx; i<endIdx; i++) h += '<td style="'+tdStyle+';color:var(--gray);">'+(holes[i]?holes[i].par:'-')+'</td>';
+      var parSum = holes.slice(startIdx,endIdx).reduce(function(s,h){return s+(h.par||0);},0);
+      h += '<td style="'+tdSumStyle+'">'+parSum+'</td></tr>';
+      // 플레이어별 행
+      pNames.forEach(function(pn) {
+        h += '<tr><td style="'+tdStyle+';color:var(--gold2);font-weight:600;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis;">'+esc(pn)+'</td>';
+        var pSum = 0;
+        for (var i=startIdx; i<endIdx; i++) {
+          var sc = holes[i] && holes[i].scores ? holes[i].scores.find(function(s){return s.name===pn;}) : null;
+          var v = sc ? sc.score : '-';
+          pSum += sc ? (sc.score||0) : 0;
+          h += '<td style="'+tdStyle+'">'+v+'</td>';
+        }
+        h += '<td style="'+tdSumStyle+'">'+pSum+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+      return h;
+    }
+
+    scHtml += buildHalf(0, 9, 'OUT');
+    scHtml += buildHalf(9, 18, 'IN');
+
+    // TOTAL 행
+    scHtml += '<div style="display:flex;gap:6px;margin-top:4px;">';
+    pNames.forEach(function(pn) {
+      var tot = holes.reduce(function(s,h){
+        var sc = h.scores ? h.scores.find(function(x){return x.name===pn;}) : null;
+        return s + (sc ? sc.score||0 : 0);
+      }, 0);
+      scHtml += '<div style="flex:1;text-align:center;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:6px 4px;">'
+        +'<div style="font-size:10px;color:var(--gray2);">'+esc(pn)+'</div>'
+        +'<div style="font-size:18px;font-weight:700;color:var(--gold2);">'+tot+'</div>'
+        +'</div>';
     });
-    scHtml += '</tbody></table></div>';
+    scHtml += '</div>';
   }
 
   overlay.innerHTML =
