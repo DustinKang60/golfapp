@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
 <meta name="theme-color" content="#0a0a0a"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -35,6 +35,11 @@
 * { -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; background: #0a0a0a; overflow: hidden; }
 body { font-family: 'Noto Sans KR', sans-serif; color: #f0ede8; }
+/* 하단 홈 인디케이터 바 숨기기 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body { --sab: env(safe-area-inset-bottom); }
+}
+::-webkit-scrollbar { display: none; }
 input, select, textarea { font-size: 16px; font-family: 'Noto Sans KR', sans-serif; -webkit-appearance: none; }
 button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none; }
 
@@ -77,6 +82,16 @@ body.light-mode .info-box { background: rgba(201,168,76,0.08); }
 
 /* ===== 앱 컨테이너 ===== */
 #app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+/* 하단 홈 인디케이터 영역도 앱 배경색으로 덮기 */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: rgba(10,10,10,0.97);
+  z-index: 999;
+  pointer-events: none;
+}
 
 /* ===== 화면 전환 ===== */
 .screen { display: none; flex-direction: column; height: 100dvh; overflow: hidden; }
@@ -932,38 +947,65 @@ function showScreen(name) {
   if (name === 'main')     { renderMain(); }
   if (name === 'analysis') { renderAnalysis(); }
   if (name === 'settings') { renderSettings(); }
-  if (name === 'new-round'){ renderRecentClubs(); }
   if (name === 'search')   { renderMyClubsList(); }
   if (name === 'course')   {
-    // 시작홀 버튼 초기화 (항상 전반부터)
     startHole = 'front';
     document.querySelectorAll('.start-hole-btn').forEach(function(b){ b.classList.remove('active'); });
     var frontBtn = document.getElementById('btn-start-front');
     if (frontBtn) frontBtn.classList.add('active');
   }
+  // main/splash 는 히스토리에 쌓지 않음 (뒤로가기로 앱 탈출 방지)
   if (name !== 'main' && name !== 'splash') {
     history.pushState({ screen: name }, '');
+  } else {
+    history.replaceState({ screen: name }, '');
   }
 }
 
 /* ============================================================
-   뒤로가기 처리
+   뒤로가기 처리 — 화면별 이전 화면으로
    ============================================================ */
-window.addEventListener('popstate', function() {
-  var overlays = ['overlay-summary','overlay-add-companion'];
-  for (var i=0; i<overlays.length; i++) {
-    var ov = document.getElementById(overlays[i]);
+// 화면별 '이전 화면' 맵
+var PREV_SCREEN = {
+  'player':     'splash',
+  'search':     'main',
+  'course':     'search',
+  'round-info': 'course',
+  'scoring':    'round-info',
+  'complete':   'scoring',
+  'analysis':   'main',
+  'settings':   'main',
+  'record-search': 'main'
+};
+
+window.addEventListener('popstate', function(e) {
+  // 1. 오버레이가 열려있으면 오버레이만 닫기
+  var detailOv = document.getElementById('round-detail-overlay');
+  if (detailOv) { detailOv.remove(); history.pushState({}, ''); return; }
+
+  var overlayIds = ['overlay-summary', 'overlay-add-companion'];
+  for (var i = 0; i < overlayIds.length; i++) {
+    var ov = document.getElementById(overlayIds[i]);
     if (ov && !ov.classList.contains('hidden')) {
       ov.classList.add('hidden');
       history.pushState({}, '');
       return;
     }
   }
+
+  // 2. 현재 화면의 이전 화면으로 이동
   var active = document.querySelector('.screen.active');
-  if (active && active.id !== 'screen-main') {
-    showScreen('main');
-    history.pushState({}, '');
+  if (!active) return;
+  var curName = active.id.replace('screen-', '');
+  var prevName = PREV_SCREEN[curName] || 'main';
+
+  // main 이면 히스토리 스택 유지 (앱 탈출 방지)
+  if (curName === 'main' || curName === 'splash') {
+    history.pushState({ screen: curName }, '');
+    return;
   }
+
+  showScreen(prevName);
 });
 
 /* ============================================================
@@ -1449,26 +1491,30 @@ function openRoundDetail(id) {
 
     function buildHalf(startIdx, endIdx, sumLabel) {
       var h = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px;">';
-      h += '<table style="width:100%;border-collapse:collapse;min-width:320px;">';
-      h += '<thead><tr><th style="'+thStyle+'">이름</th>';
+      h += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+      // 컬럼 너비 고정 (이름 1개 + 홀 9개 + 합계 1개 = 11컬럼)
+      h += '<colgroup><col style="width:14%"/>';
+      for (var c=0;c<9;c++) h += '<col style="width:8%"/>';
+      h += '<col style="width:10%"/></colgroup>';
+      h += '<thead><tr><th style="'+thStyle+'font-size:9px;">이름</th>';
       for (var i=startIdx; i<endIdx; i++) {
         h += '<th style="'+thStyle+'">'+(holes[i]?holes[i].holeNo:i+1)+'</th>';
       }
       h += '<th style="'+thSumStyle+'">'+sumLabel+'</th></tr></thead><tbody>';
       // Par 행
-      h += '<tr><td style="'+tdStyle+';color:var(--gray2);">Par</td>';
-      for (var i=startIdx; i<endIdx; i++) h += '<td style="'+tdStyle+';color:var(--gray);">'+(holes[i]?holes[i].par:'-')+'</td>';
+      h += '<tr><td style="'+tdStyle+';color:var(--gray2);font-size:10px;">Par</td>';
+      for (var i=startIdx; i<endIdx; i++) h += '<td style="'+tdStyle+';color:var(--gray);font-size:11px;">'+(holes[i]?holes[i].par:'-')+'</td>';
       var parSum = holes.slice(startIdx,endIdx).reduce(function(s,h){return s+(h.par||0);},0);
       h += '<td style="'+tdSumStyle+'">'+parSum+'</td></tr>';
       // 플레이어별 행
       pNames.forEach(function(pn) {
-        h += '<tr><td style="'+tdStyle+';color:var(--gold2);font-weight:600;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis;">'+esc(pn)+'</td>';
+        h += '<tr><td style="'+tdStyle+';color:var(--gold2);font-weight:600;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(pn)+'</td>';
         var pSum = 0;
         for (var i=startIdx; i<endIdx; i++) {
           var sc = holes[i] && holes[i].scores ? holes[i].scores.find(function(s){return s.name===pn;}) : null;
           var v = sc ? sc.score : '-';
           pSum += sc ? (sc.score||0) : 0;
-          h += '<td style="'+tdStyle+'">'+v+'</td>';
+          h += '<td style="'+tdStyle+'font-size:11px;">'+v+'</td>';
         }
         h += '<td style="'+tdSumStyle+'">'+pSum+'</td></tr>';
       });
