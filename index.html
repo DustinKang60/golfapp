@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
-<meta name="theme-color" content="#0a0a0a"/>
+<meta name="theme-color" content="#0f2318"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="골프일기"/>
@@ -26,15 +26,15 @@
 }
 .start-hole-btn.active {
   border-color: var(--gold);
-  background: rgba(201,168,76,0.08);
+  background: rgba(82,204,120,0.08);
 }
 .start-hole-btn .gray { color: var(--gray); }
 
 /* ===== 전역 리셋 ===== */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 * { -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; background: #0a0a0a; overflow: hidden; }
-body { font-family: 'Noto Sans KR', sans-serif; color: #f0ede8; }
+html, body { height: 100%; background: #0f2318; overflow: hidden; }
+body { font-family: 'Noto Sans KR', sans-serif; color: #e8f5ee; }
 /* 하단 홈 인디케이터 바 숨기기 */
 @supports (padding-bottom: env(safe-area-inset-bottom)) {
   body { --sab: env(safe-area-inset-bottom); }
@@ -45,18 +45,18 @@ button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
 
 /* ===== CSS 변수 — 다크모드 (기본) ===== */
 :root {
-  --bg:      #0a0a0a;
-  --dark:    #111111;
-  --card:    #1a1a1a;
-  --card2:   #222222;
-  --border:  #2a2a2a;
-  --gold:    #c9a84c;
-  --gold2:   #e8c96a;
-  --gold3:   #f5e0a0;
-  --white:   #f0ede8;
-  --gray:    #888880;
-  --gray2:   #555550;
-  --green:   #4caf72;
+  --bg:      #0f2318;
+  --dark:    #0d2016;
+  --card:    #142b1c;
+  --card2:   #1c3d28;
+  --border:  #1e4230;
+  --gold:    #52cc78;
+  --gold2:   #7ddc9a;
+  --gold3:   #b0edc0;
+  --white:   #e8f5ee;
+  --gray:    #5db87a;
+  --gray2:   #3a7a52;
+  --green:   #4ade80;
   --red:     #e05555;
   --blue:    #5588cc;
   --topbar-h: 56px;
@@ -64,21 +64,24 @@ button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none;
 }
 /* ===== 라이트모드 ===== */
 body.light-mode {
-  --bg:      #f5f2ec;
+  --bg:      #f0f9f3;
   --dark:    #ffffff;
   --card:    #ffffff;
-  --card2:   #f0ede6;
-  --border:  #ddd8cc;
-  --white:   #1a1a1a;
-  --gray:    #666660;
-  --gray2:   #999990;
+  --card2:   #e8f5ee;
+  --border:  #c0dfc8;
+  --gold:    #2a8a4a;
+  --gold2:   #1e6e3a;
+  --gold3:   #144d28;
+  --white:   #0f2318;
+  --gray:    #3a7a52;
+  --gray2:   #6aaa80;
 }
-body.light-mode { background: #f5f2ec; color: #1a1a1a; }
+body.light-mode { background: #f0f9f3; color: #0f2318; }
 body.light-mode .topbar { background: #ffffff; }
-body.light-mode .tabbar { background: rgba(245,242,236,0.97); }
-body.light-mode .score-table th { background: rgba(201,168,76,0.15); }
+body.light-mode .tabbar { background: rgba(240,249,243,0.97); }
+body.light-mode .score-table th { background: rgba(42,138,74,0.12); }
 body.light-mode .warn-box { background: rgba(224,85,85,0.05); }
-body.light-mode .info-box { background: rgba(201,168,76,0.08); }
+body.light-mode .info-box { background: rgba(42,138,74,0.08); }
 
 /* ===== 앱 컨테이너 ===== */
 #app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
@@ -88,7 +91,7 @@ body::after {
   position: fixed;
   bottom: 0; left: 0; right: 0;
   height: env(safe-area-inset-bottom, 0px);
-  background: rgba(10,10,10,0.97);
+  background: rgba(13,32,22,0.97);
   z-index: 999;
   pointer-events: none;
 }
@@ -145,7 +148,7 @@ body::after {
   flex-shrink: 0;
   display: flex;
   border-top: 1px solid var(--border);
-  background: rgba(10,10,10,0.97);
+  background: rgba(13,32,22,0.97);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   gap: 0;
 }
@@ -188,20 +191,20 @@ body::after {
 .tab-item.tab-new-round .tab-icon-wrap {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #a87820, #e8c96a);
+  background: linear-gradient(135deg, #2a8a4a, #52cc78);
   border-radius: 12px;
-  box-shadow: 0 2px 10px rgba(201,168,76,0.3);
+  box-shadow: 0 2px 10px rgba(82,204,120,0.3);
   margin-top: -2px;
 }
 .tab-item.tab-new-round { color: var(--gold2); }
 .tab-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
-.tab-item.tab-new-round .tab-svg { stroke: #1a1000; width: 20px; height: 20px; stroke-width: 2; }
+.tab-item.tab-new-round .tab-svg { stroke: #0d2016; width: 20px; height: 20px; stroke-width: 2; }
 
 /* ===== 공통 버튼 ===== */
 .btn-gold {
   width: 100%; padding: 15px;
-  background: linear-gradient(135deg, #a87820, #e8c96a, #a87820);
-  color: #1a1000;
+  background: linear-gradient(135deg, #2a8a4a, #52cc78, #2a8a4a);
+  color: #0d2016;
   font-size: 15px; font-weight: 700;
   border-radius: 12px; border: none;
   letter-spacing: 1px;
@@ -256,7 +259,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
   padding: 8px 16px; border-radius: 20px; font-size: 14px;
   border: 1px solid var(--border); background: var(--card); color: var(--gray);
 }
-.chip.active { border-color: var(--gold); background: rgba(201,168,76,0.12); color: var(--gold2); }
+.chip.active { border-color: var(--gold); background: rgba(82,204,120,0.12); color: var(--gold2); }
 
 /* ===== 카드 ===== */
 .list-card {
@@ -267,7 +270,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 
 /* ===== 배지 ===== */
 .badge { padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; }
-.badge-gold { background: rgba(201,168,76,0.15); color: var(--gold2); border: 1px solid rgba(201,168,76,0.3); }
+.badge-gold { background: rgba(82,204,120,0.15); color: var(--gold2); border: 1px solid rgba(82,204,120,0.3); }
 .badge-green { background: rgba(76,175,114,0.15); color: var(--green); border: 1px solid rgba(76,175,114,0.3); }
 .badge-outline { background: transparent; color: var(--gray); border: 1px solid var(--border); }
 .badge-red   { background: rgba(224,85,85,0.15);  color: var(--red);   border: 1px solid rgba(224,85,85,0.3); }
@@ -308,7 +311,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 
 /* ===== 스플래시 ===== */
 #screen-splash {
-  background: radial-gradient(ellipse at 50% 30%, rgba(201,168,76,0.1) 0%, transparent 65%), var(--bg);
+  background: radial-gradient(ellipse at 50% 30%, rgba(82,204,120,0.1) 0%, transparent 65%), var(--bg);
   align-items: center; justify-content: center;
 }
 .splash-ring {
@@ -316,8 +319,8 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
   border: 2px solid var(--gold);
   display: flex; align-items: center; justify-content: center;
   font-size: 50px; margin-bottom: 28px;
-  box-shadow: 0 0 48px rgba(201,168,76,0.2);
-  background: radial-gradient(circle, rgba(201,168,76,0.08), transparent);
+  box-shadow: 0 0 48px rgba(82,204,120,0.2);
+  background: radial-gradient(circle, rgba(82,204,120,0.08), transparent);
 }
 .splash-title { font-family: 'Playfair Display', serif; font-size: 36px; color: var(--gold); letter-spacing: 3px; }
 .splash-sub { font-size: 12px; color: var(--gray); letter-spacing: 3px; text-transform: uppercase; margin: 6px 0 32px; }
@@ -327,8 +330,8 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 
 /* ===== 메인 화면 ===== */
 .season-card {
-  background: linear-gradient(135deg, rgba(201,168,76,0.13), rgba(201,168,76,0.04));
-  border: 1px solid rgba(201,168,76,0.25);
+  background: linear-gradient(135deg, rgba(82,204,120,0.13), rgba(82,204,120,0.04));
+  border: 1px solid rgba(82,204,120,0.25);
   border-radius: 14px; padding: 16px; margin-bottom: 16px;
 }
 .season-label { font-size: 11px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
@@ -355,33 +358,33 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .search-input { flex: 1; padding: 13px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--white); font-size: 16px; }
 .search-input:focus { outline: none; border-color: var(--gold); }
 .search-input::placeholder { color: var(--gray2); }
-.search-btn { padding: 13px 16px; background: linear-gradient(135deg, #a87820, #e8c96a); border: none; border-radius: 10px; font-size: 16px; }
+.search-btn { padding: 13px 16px; background: linear-gradient(135deg, #2a8a4a, #52cc78); border: none; border-radius: 10px; font-size: 16px; }
 .ai-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; border-radius: 6px; background: rgba(85,136,204,0.15); color: var(--blue); border: 1px solid rgba(85,136,204,0.3); margin-top: 4px; }
 
 /* ===== 스코어카드 테이블 ===== */
 .score-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
-.score-table th { background: rgba(201,168,76,0.1); color: var(--gold); padding: 6px 3px; text-align: center; border: 1px solid var(--border); font-size: 10px; letter-spacing: 0.5px; }
+.score-table th { background: rgba(82,204,120,0.1); color: var(--gold); padding: 6px 3px; text-align: center; border: 1px solid var(--border); font-size: 10px; letter-spacing: 0.5px; }
 .score-table td { padding: 7px 3px; text-align: center; border: 1px solid var(--border); color: var(--white); font-size: 12px; }
-.score-table tr.total-row td { background: rgba(201,168,76,0.08); color: var(--gold2); font-weight: 700; }
+.score-table tr.total-row td { background: rgba(82,204,120,0.08); color: var(--gold2); font-weight: 700; }
 
 /* ===== 코스 옵션 ===== */
 .course-option { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
-.course-option.active { border-color: var(--gold); background: rgba(201,168,76,0.06); }
+.course-option.active { border-color: var(--gold); background: rgba(82,204,120,0.06); }
 
 /* ===== 날씨 칩 ===== */
 .weather-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .w-chip { padding: 9px 14px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); font-size: 14px; color: var(--gray); }
-.w-chip.active { border-color: var(--gold); background: rgba(201,168,76,0.1); color: var(--gold2); }
+.w-chip.active { border-color: var(--gold); background: rgba(82,204,120,0.1); color: var(--gold2); }
 
 /* ===== 홀 스코어 입력 ===== */
 .progress-bar-wrap { margin-bottom: 12px; }
 .progress-info { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray); margin-bottom: 5px; }
 .progress-track { height: 4px; background: var(--card2); border-radius: 2px; overflow: hidden; }
-.progress-fill { height: 100%; background: linear-gradient(to right, #a87820, #e8c96a); border-radius: 2px; transition: width 0.3s; }
+.progress-fill { height: 100%; background: linear-gradient(to right, #2a8a4a, #52cc78); border-radius: 2px; transition: width 0.3s; }
 
 .hole-header {
-  background: linear-gradient(135deg, rgba(201,168,76,0.15), rgba(201,168,76,0.04));
-  border: 1px solid rgba(201,168,76,0.3);
+  background: linear-gradient(135deg, rgba(82,204,120,0.15), rgba(82,204,120,0.04));
+  border: 1px solid rgba(82,204,120,0.3);
   border-radius: 14px; padding: 16px; margin-bottom: 14px; text-align: center;
 }
 .hole-num-lbl { font-size: 11px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
@@ -454,7 +457,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .bar-label { font-size: 11px; color: var(--gray); width: 42px; text-align: right; flex-shrink: 0; }
 .bar-track { flex: 1; height: 8px; background: var(--card2); border-radius: 4px; overflow: hidden; }
-.bar-fill { height: 100%; background: linear-gradient(to right, #a87820, #e8c96a); border-radius: 4px; }
+.bar-fill { height: 100%; background: linear-gradient(to right, #2a8a4a, #52cc78); border-radius: 4px; }
 .bar-val { font-size: 11px; color: var(--gold2); width: 24px; flex-shrink: 0; text-align: right; }
 .par-grid { display: flex; gap: 8px; }
 .par-box { flex: 1; text-align: center; background: var(--card2); border-radius: 8px; padding: 10px 0; }
@@ -466,17 +469,17 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
 .settings-row:last-child { border-bottom: none; }
 .settings-left { display: flex; align-items: center; gap: 12px; }
-.settings-icon { width: 34px; height: 34px; border-radius: 9px; background: rgba(201,168,76,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.settings-icon { width: 34px; height: 34px; border-radius: 9px; background: rgba(82,204,120,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
 .settings-name { font-size: 15px; color: var(--white); }
 .settings-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
 .toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--card2); border: 1px solid var(--border); position: relative; flex-shrink: 0; }
-.toggle.on { background: rgba(201,168,76,0.25); border-color: var(--gold); }
+.toggle.on { background: rgba(82,204,120,0.25); border-color: var(--gold); }
 .toggle-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--gray2); position: absolute; top: 2px; left: 3px; transition: left 0.2s, background 0.2s; }
 .toggle.on .toggle-dot { background: var(--gold); left: 23px; }
 
 .companion-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
 .companion-left { display: flex; align-items: center; gap: 10px; }
-.companion-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--gold2); font-weight: 700; flex-shrink: 0; }
+.companion-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(82,204,120,0.15); border: 1px solid rgba(82,204,120,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--gold2); font-weight: 700; flex-shrink: 0; }
 .companion-name { font-size: 15px; color: var(--white); }
 .companion-hdcp { font-size: 12px; color: var(--gray); margin-top: 1px; }
 .del-btn { font-size: 18px; color: var(--gray2); background: none; border: none; padding: 6px; }
@@ -484,9 +487,9 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .warn-box { background: rgba(224,85,85,0.07); border: 1px solid rgba(224,85,85,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
 .warn-title { font-size: 13px; font-weight: 700; color: #e07070; margin-bottom: 4px; }
 .warn-text { font-size: 12px; color: #aa6060; line-height: 1.6; }
-.info-box { background: rgba(201,168,76,0.06); border: 1px solid rgba(201,168,76,0.2); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+.info-box { background: rgba(82,204,120,0.06); border: 1px solid rgba(82,204,120,0.2); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
 .info-title { font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 3px; }
-.info-text { font-size: 12px; color: #887750; line-height: 1.6; }
+.info-text { font-size: 12px; color: #3a7a52; line-height: 1.6; }
 .backup-time { font-size: 12px; color: var(--gray2); text-align: center; margin-top: 6px; margin-bottom: 12px; letter-spacing: 0.5px; }
 
 /* ===== AI 로딩 ===== */
@@ -1285,7 +1288,7 @@ function viewFullScorecard(id) {
     // 총계
     +'<div style="padding:12px;">'
     +'<table style="width:100%;border-collapse:collapse;">'
-    +'<tr style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.3);">'
+    +'<tr style="background:rgba(82,204,120,0.1);border:1px solid rgba(82,204,120,0.3);">'
     +'<td colspan="2" style="padding:10px 8px;font-size:13px;color:var(--gold);font-weight:700;">TOTAL</td>'
     + playerNames.map(function(n){
         var tot = r.scores.reduce(function(sum,hs){
@@ -1487,8 +1490,8 @@ function openRoundDetail(id) {
     // 플레이어 이름 추출
     var pNames = (holes[0] && holes[0].scores) ? holes[0].scores.map(function(s){ return s.name; }) : [];
 
-    var thStyle = 'background:rgba(201,168,76,0.12);color:var(--gold);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
-    var thSumStyle = 'background:rgba(201,168,76,0.2);color:var(--gold2);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
+    var thStyle = 'background:rgba(82,204,120,0.12);color:var(--gold);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
+    var thSumStyle = 'background:rgba(82,204,120,0.2);color:var(--gold2);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
     var tdStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:11px;';
     var tdSumStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold2);font-size:11px;';
     var tdTotStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold3);font-size:11px;';
@@ -1536,7 +1539,7 @@ function openRoundDetail(id) {
         var sc = h.scores ? h.scores.find(function(x){return x.name===pn;}) : null;
         return s + (sc ? sc.score||0 : 0);
       }, 0);
-      scHtml += '<div style="flex:1;text-align:center;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:6px 4px;">'
+      scHtml += '<div style="flex:1;text-align:center;background:rgba(82,204,120,0.08);border:1px solid rgba(82,204,120,0.2);border-radius:8px;padding:6px 4px;">'
         +'<div style="font-size:10px;color:var(--gray2);">'+esc(pn)+'</div>'
         +'<div style="font-size:18px;font-weight:700;color:var(--gold2);">'+tot+'</div>'
         +'</div>';
@@ -2057,7 +2060,7 @@ function nextHole() {
    ============================================================ */
 function openScoreSummary() {
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
-    +'<tr style="background:rgba(201,168,76,0.1);">'
+    +'<tr style="background:rgba(82,204,120,0.1);">'
     +'<th style="padding:6px;text-align:center;color:var(--gold);border:1px solid var(--border);">홀</th>'
     +'<th style="padding:6px;text-align:center;color:var(--gold);border:1px solid var(--border);">Par</th>';
   curPlayers.forEach(function(n){
@@ -2080,7 +2083,7 @@ function openScoreSummary() {
     html += '</tr>';
   }
   // 합계
-  html += '<tr style="background:rgba(201,168,76,0.08);">'
+  html += '<tr style="background:rgba(82,204,120,0.08);">'
     +'<td colspan="2" style="padding:5px;text-align:center;border:1px solid var(--border);color:var(--gold);font-weight:700;">합계</td>';
   curPlayers.forEach(function(n){
     var tot = 0;
