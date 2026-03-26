@@ -873,6 +873,8 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 <!-- 토스트 -->
 <div id="toast"></div>
 
+</div><!-- /#app -->
+
 <script>
 'use strict';
 
@@ -2854,7 +2856,10 @@ function saveClubEditor() {
   renderCourseScreen();
 }
 
-
+/* ============================================================
+   골프장 파일 가져오기 (JSON)
+   ============================================================ */
+function importClubFile() {
   var input = document.createElement('input');
   input.type = 'file';
   input.accept = '.json';
