@@ -1,0 +1,3536 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no"/>
+<meta name="theme-color" content="#0f2318"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="골프일기"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<link rel="manifest" href="/golfapp/manifest.json"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+<title>골프일기</title>
+<style>
+/* ===== 시작 홀 선택 버튼 ===== */
+.start-hole-btn {
+  flex: 1;
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+  color: var(--white);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.start-hole-btn.active {
+  border-color: var(--gold);
+  background: rgba(82,204,120,0.08);
+}
+.start-hole-btn .gray { color: var(--gray); }
+
+/* ===== 전역 리셋 ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+* { -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: #0f2318; overflow: hidden; }
+body { font-family: 'Noto Sans KR', sans-serif; color: #e8f5ee; }
+/* 하단 홈 인디케이터 바 숨기기 */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  body { --sab: env(safe-area-inset-bottom); }
+}
+::-webkit-scrollbar { display: none; }
+input, select, textarea { font-size: 16px; font-family: 'Noto Sans KR', sans-serif; -webkit-appearance: none; }
+button { font-family: 'Noto Sans KR', sans-serif; cursor: pointer; border: none; }
+
+/* ===== CSS 변수 — 다크모드 (기본) ===== */
+:root {
+  --bg:      #0f2318;
+  --dark:    #0d2016;
+  --card:    #142b1c;
+  --card2:   #1c3d28;
+  --border:  #1e4230;
+  --gold:    #52cc78;
+  --gold2:   #7ddc9a;
+  --gold3:   #b0edc0;
+  --white:   #e8f5ee;
+  --gray:    #5db87a;
+  --gray2:   #3a7a52;
+  --green:   #4ade80;
+  --red:     #e05555;
+  --blue:    #5588cc;
+  --topbar-h: 56px;
+  --tabbar-h: 60px;
+}
+/* ===== 라이트모드 ===== */
+body.light-mode {
+  --bg:      #f0f9f3;
+  --dark:    #ffffff;
+  --card:    #ffffff;
+  --card2:   #e8f5ee;
+  --border:  #c0dfc8;
+  --gold:    #2a8a4a;
+  --gold2:   #1e6e3a;
+  --gold3:   #144d28;
+  --white:   #0f2318;
+  --gray:    #3a7a52;
+  --gray2:   #6aaa80;
+}
+body.light-mode { background: #f0f9f3; color: #0f2318; }
+body.light-mode .topbar { background: #ffffff; }
+body.light-mode .tabbar { background: rgba(240,249,243,0.97); }
+body.light-mode .score-table th { background: rgba(42,138,74,0.12); }
+body.light-mode .warn-box { background: rgba(224,85,85,0.05); }
+body.light-mode .info-box { background: rgba(42,138,74,0.08); }
+
+/* ===== 앱 컨테이너 ===== */
+#app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+/* 하단 홈 인디케이터 영역도 앱 배경색으로 덮기 */
+body::after {
+  content: '';
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  height: env(safe-area-inset-bottom, 0px);
+  background: rgba(13,32,22,0.97);
+  z-index: 999;
+  pointer-events: none;
+}
+
+/* ===== 화면 전환 ===== */
+.screen { display: none; flex-direction: column; height: 100dvh; overflow: hidden; }
+.screen.active { display: flex; }
+
+/* ===== 스크롤 영역 ===== */
+.scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 16px 16px 24px;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ===== TOPBAR ===== */
+.topbar {
+  height: var(--topbar-h);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--dark);
+}
+.topbar-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  color: var(--gold);
+  letter-spacing: 1px;
+}
+.topbar-title.small { font-family: 'Noto Sans KR', sans-serif; font-size: 15px; font-weight: 500; color: var(--white); letter-spacing: 0; }
+.topbar-btn {
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; color: var(--gold);
+}
+.topbar-back { font-size: 22px; color: var(--gray); background: none; border: none; padding: 8px; }
+
+/* ===== TABBAR ===== */
+.tabbar {
+  height: var(--tabbar-h);
+  flex-shrink: 0;
+  display: flex;
+  border-top: 1px solid var(--border);
+  background: rgba(13,32,22,0.97);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  gap: 0;
+}
+.tab-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  color: var(--gray2);
+  background: none;
+  border: none;
+  padding: 6px 0;
+  position: relative;
+  transition: color 0.15s;
+}
+.tab-item.active { color: var(--gold); }
+.tab-item.active .tab-icon-wrap::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--gold);
+  border-radius: 2px;
+}
+.tab-icon-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tab-item.tab-new-round .tab-icon-wrap {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #2a8a4a, #52cc78);
+  border-radius: 12px;
+  box-shadow: 0 2px 10px rgba(82,204,120,0.3);
+  margin-top: -2px;
+}
+.tab-item.tab-new-round { color: var(--gold2); }
+.tab-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.tab-item.tab-new-round .tab-svg { stroke: #0d2016; width: 20px; height: 20px; stroke-width: 2; }
+
+/* ===== 공통 버튼 ===== */
+.btn-gold {
+  width: 100%; padding: 15px;
+  background: linear-gradient(135deg, #2a8a4a, #52cc78, #2a8a4a);
+  color: #0d2016;
+  font-size: 15px; font-weight: 700;
+  border-radius: 12px; border: none;
+  letter-spacing: 1px;
+}
+.btn-outline {
+  width: 100%; padding: 14px;
+  background: transparent;
+  color: var(--gold);
+  font-size: 14px; font-weight: 500;
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+.btn-ghost {
+  padding: 8px 14px;
+  background: var(--card);
+  color: var(--gray);
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.btn-row { display: flex; gap: 10px; }
+.btn-row .btn-gold, .btn-row .btn-outline { flex: 1; }
+
+/* ===== 입력 필드 ===== */
+.input-group { margin-bottom: 14px; }
+.input-label { font-size: 12px; color: var(--gray); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.input-field {
+  width: 100%; padding: 13px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--white); font-size: 16px;
+}
+.input-field:focus { outline: none; border-color: var(--gold); }
+.input-field::placeholder { color: var(--gray2); }
+select.input-field { color: var(--white); }
+select.input-field option { background: var(--card); }
+textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-height: 1.6; }
+
+/* ===== 섹션 타이틀 ===== */
+.section-title {
+  font-size: 12px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--gold); margin: 16px 0 10px;
+  display: flex; align-items: center; gap: 8px;
+}
+.section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+/* ===== 칩 ===== */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.chip {
+  padding: 8px 16px; border-radius: 20px; font-size: 14px;
+  border: 1px solid var(--border); background: var(--card); color: var(--gray);
+}
+.chip.active { border-color: var(--gold); background: rgba(82,204,120,0.12); color: var(--gold2); }
+
+/* ===== 카드 ===== */
+.list-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 10px;
+}
+.divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+/* ===== 배지 ===== */
+.badge { padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.badge-gold { background: rgba(82,204,120,0.15); color: var(--gold2); border: 1px solid rgba(82,204,120,0.3); }
+.badge-green { background: rgba(76,175,114,0.15); color: var(--green); border: 1px solid rgba(76,175,114,0.3); }
+.badge-outline { background: transparent; color: var(--gray); border: 1px solid var(--border); }
+.badge-red   { background: rgba(224,85,85,0.15);  color: var(--red);   border: 1px solid rgba(224,85,85,0.3); }
+.badge-blue  { background: rgba(85,136,204,0.15); color: var(--blue);  border: 1px solid rgba(85,136,204,0.3); }
+.badge-gray  { background: rgba(136,136,128,0.15);color: var(--gray);  border: 1px solid rgba(136,136,128,0.3); }
+
+/* ===== 오버레이 / 바텀시트 ===== */
+.overlay {
+  position: fixed; inset: 0; z-index: 100;
+  background: rgba(0,0,0,0.7);
+  display: flex; align-items: flex-end;
+}
+.overlay.hidden { display: none; }
+.bottom-sheet {
+  width: 100%; background: var(--dark);
+  border-radius: 20px 20px 0 0;
+  border-top: 1px solid var(--border);
+  padding: 12px 16px 32px;
+  max-height: 85dvh;
+  overflow-y: auto;
+}
+.sheet-handle {
+  width: 36px; height: 4px;
+  background: var(--border); border-radius: 2px;
+  margin: 0 auto 16px;
+}
+
+/* ===== 토스트 ===== */
+#toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  background: var(--card2); color: var(--white);
+  padding: 10px 20px; border-radius: 20px;
+  font-size: 13px; border: 1px solid var(--border);
+  z-index: 200; opacity: 0; transition: opacity 0.3s;
+  white-space: nowrap;
+}
+#toast.show { opacity: 1; }
+
+/* ===== 스플래시 ===== */
+#screen-splash {
+  background: radial-gradient(ellipse at 50% 30%, rgba(82,204,120,0.1) 0%, transparent 65%), var(--bg);
+  align-items: center; justify-content: center;
+}
+.splash-ring {
+  width: 110px; height: 110px; border-radius: 50%;
+  border: 2px solid var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 50px; margin-bottom: 28px;
+  box-shadow: 0 0 48px rgba(82,204,120,0.2);
+  background: radial-gradient(circle, rgba(82,204,120,0.08), transparent);
+}
+.splash-title { font-family: 'Playfair Display', serif; font-size: 36px; color: var(--gold); letter-spacing: 3px; }
+.splash-sub { font-size: 12px; color: var(--gray); letter-spacing: 3px; text-transform: uppercase; margin: 6px 0 32px; }
+.splash-line { width: 48px; height: 1px; background: linear-gradient(to right, transparent, var(--gold), transparent); margin: 0 auto 32px; }
+.splash-btns { width: 100%; padding: 0 32px; display: flex; flex-direction: column; gap: 10px; }
+.splash-foot { margin-top: 36px; font-size: 11px; color: var(--gray2); letter-spacing: 1px; }
+
+/* ===== 메인 화면 ===== */
+.season-card {
+  background: linear-gradient(135deg, rgba(82,204,120,0.13), rgba(82,204,120,0.04));
+  border: 1px solid rgba(82,204,120,0.25);
+  border-radius: 14px; padding: 16px; margin-bottom: 16px;
+}
+.season-label { font-size: 11px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+.season-stats { display: flex; justify-content: space-between; }
+.season-stat { text-align: center; }
+.season-val { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--white); }
+.season-val.gold { color: var(--gold); }
+.season-val.green { color: var(--green); }
+.season-lbl { font-size: 10px; color: var(--gray); letter-spacing: 1px; margin-top: 2px; }
+
+.round-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.round-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.round-course { font-size: 16px; font-weight: 500; color: var(--white); }
+.round-info { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.round-score { font-family: 'Playfair Display', serif; font-size: 28px; color: var(--gold); text-align: right; }
+.round-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.round-tag { font-size: 12px; color: var(--gray); background: var(--card2); padding: 4px 9px; border-radius: 6px; }
+.empty-state { text-align: center; padding: 60px 20px; color: var(--gray2); }
+.empty-icon { font-size: 48px; margin-bottom: 14px; }
+.empty-text { font-size: 14px; line-height: 1.8; }
+
+/* ===== 검색 ===== */
+.search-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+.search-input { flex: 1; padding: 13px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; color: var(--white); font-size: 16px; }
+.search-input:focus { outline: none; border-color: var(--gold); }
+.search-input::placeholder { color: var(--gray2); }
+.search-btn { padding: 13px 16px; background: linear-gradient(135deg, #2a8a4a, #52cc78); border: none; border-radius: 10px; font-size: 16px; }
+.ai-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10px; padding: 2px 7px; border-radius: 6px; background: rgba(85,136,204,0.15); color: var(--blue); border: 1px solid rgba(85,136,204,0.3); margin-top: 4px; }
+
+/* ===== 스코어카드 테이블 ===== */
+.score-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 8px; }
+.score-table th { background: rgba(82,204,120,0.1); color: var(--gold); padding: 6px 3px; text-align: center; border: 1px solid var(--border); font-size: 10px; letter-spacing: 0.5px; }
+.score-table td { padding: 7px 3px; text-align: center; border: 1px solid var(--border); color: var(--white); font-size: 12px; }
+.score-table tr.total-row td { background: rgba(82,204,120,0.08); color: var(--gold2); font-weight: 700; }
+
+/* ===== 코스 옵션 ===== */
+.course-option { display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 8px; }
+.course-option.active { border-color: var(--gold); background: rgba(82,204,120,0.06); }
+
+/* ===== 날씨 칩 ===== */
+.weather-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.w-chip { padding: 9px 14px; border-radius: 20px; background: var(--card); border: 1px solid var(--border); font-size: 14px; color: var(--gray); }
+.w-chip.active { border-color: var(--gold); background: rgba(82,204,120,0.1); color: var(--gold2); }
+
+/* ===== 홀 스코어 입력 ===== */
+.progress-bar-wrap { margin-bottom: 12px; }
+.progress-info { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray); margin-bottom: 5px; }
+.progress-track { height: 4px; background: var(--card2); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: linear-gradient(to right, #2a8a4a, #52cc78); border-radius: 2px; transition: width 0.3s; }
+
+.hole-header {
+  background: linear-gradient(135deg, rgba(82,204,120,0.15), rgba(82,204,120,0.04));
+  border: 1px solid rgba(82,204,120,0.3);
+  border-radius: 14px; padding: 16px; margin-bottom: 14px; text-align: center;
+}
+.hole-num-lbl { font-size: 11px; color: var(--gold); letter-spacing: 2px; text-transform: uppercase; }
+.hole-big { font-family: 'Playfair Display', serif; font-size: 56px; color: var(--gold); line-height: 1.1; }
+.hole-details { display: flex; justify-content: center; gap: 24px; margin-top: 8px; }
+.hole-detail-item { text-align: center; }
+.hole-detail-val { font-size: 15px; font-weight: 700; color: var(--white); }
+.hole-detail-lbl { font-size: 10px; color: var(--gray); letter-spacing: 1px; }
+
+.running-bar { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.running-lbl { font-size: 11px; color: var(--gray); letter-spacing: 1px; }
+.running-val { font-size: 14px; font-weight: 700; color: var(--gold2); }
+
+.stepper-card { display: flex; align-items: center; justify-content: space-between; background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
+.stepper-info { flex: 1; }
+.stepper-name { font-size: 15px; color: var(--white); font-weight: 500; }
+.stepper-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.stepper-controls { display: flex; align-items: center; gap: 12px; }
+.step-btn { width: 40px; height: 40px; border-radius: 50%; background: var(--card2); border: 1px solid var(--border); font-size: 22px; color: var(--gold); display: flex; align-items: center; justify-content: center; }
+.step-val { font-size: 24px; font-weight: 700; color: var(--white); min-width: 30px; text-align: center; }
+.score-rel { font-size: 11px; padding: 2px 7px; border-radius: 8px; margin-top: 2px; text-align: center; }
+.rel-eagle  { background: rgba(85,136,204,0.2);  color: var(--blue);  border: 1px solid rgba(85,136,204,0.3); }
+.rel-birdie { background: rgba(76,175,114,0.2);  color: var(--green); border: 1px solid rgba(76,175,114,0.3); }
+.rel-par    { background: rgba(136,136,128,0.15); color: var(--gray);  border: 1px solid rgba(136,136,128,0.2); }
+.rel-bogey  { background: rgba(224,85,85,0.15);  color: var(--red);   border: 1px solid rgba(224,85,85,0.25); }
+.rel-double { background: rgba(224,85,85,0.25);  color: #ff8888;      border: 1px solid rgba(224,85,85,0.4); }
+
+/* ===== 완료 화면 ===== */
+.complete-header { text-align: center; padding: 20px 0 16px; }
+.complete-label { font-size: 11px; color: var(--gold); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 8px; }
+.complete-score { font-family: 'Playfair Display', serif; font-size: 64px; color: var(--gold); line-height: 1; }
+.complete-over { font-size: 16px; margin-top: 6px; }
+.complete-course { font-size: 12px; color: var(--gray); margin-top: 4px; }
+.hole-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.hole-mini-row-label {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 4px;
+  margin-bottom: 14px;
+}
+.hole-mini {
+  border-radius: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 4px 2px;
+  border: 1px solid var(--border); background: var(--card); color: var(--white);
+}
+.hole-mini .hm-no  { font-size: 9px; color: var(--gray2); line-height: 1; margin-bottom: 2px; }
+.hole-mini .hm-sc  { font-size: 14px; font-weight: 700; line-height: 1; }
+.hole-mini.eagle  { background: rgba(85,136,204,0.2);  border-color: rgba(85,136,204,0.5); }
+.hole-mini.eagle  .hm-sc { color: var(--blue); }
+.hole-mini.birdie { background: rgba(76,175,114,0.2);  border-color: rgba(76,175,114,0.5); }
+.hole-mini.birdie .hm-sc { color: var(--green); }
+.hole-mini.bogey  { background: rgba(224,85,85,0.12);  border-color: rgba(224,85,85,0.3); }
+.hole-mini.bogey  .hm-sc { color: var(--red); }
+.hole-mini.double { background: rgba(224,85,85,0.22);  border-color: rgba(224,85,85,0.5); }
+.hole-mini.double .hm-sc { color: #ff8888; }
+
+/* ===== 분석 ===== */
+.highlight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+.highlight-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px; text-align: center; }
+.highlight-icon { font-size: 22px; margin-bottom: 4px; }
+.highlight-val { font-size: 20px; font-weight: 700; color: var(--white); }
+.highlight-lbl { font-size: 10px; color: var(--gray); letter-spacing: 1px; margin-top: 2px; }
+.stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.bar-label { font-size: 11px; color: var(--gray); width: 42px; text-align: right; flex-shrink: 0; }
+.bar-track { flex: 1; height: 8px; background: var(--card2); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(to right, #2a8a4a, #52cc78); border-radius: 4px; }
+.bar-val { font-size: 11px; color: var(--gold2); width: 24px; flex-shrink: 0; text-align: right; }
+.par-grid { display: flex; gap: 8px; }
+.par-box { flex: 1; text-align: center; background: var(--card2); border-radius: 8px; padding: 10px 0; }
+.par-box-val { font-size: 18px; font-weight: 700; color: var(--white); }
+.par-box-lbl { font-size: 10px; color: var(--gray); margin-top: 2px; }
+
+/* ===== 설정 ===== */
+.settings-block { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 0 14px; margin-bottom: 10px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.settings-row:last-child { border-bottom: none; }
+.settings-left { display: flex; align-items: center; gap: 12px; }
+.settings-icon { width: 34px; height: 34px; border-radius: 9px; background: rgba(82,204,120,0.1); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.settings-name { font-size: 15px; color: var(--white); }
+.settings-sub { font-size: 12px; color: var(--gray); margin-top: 2px; }
+.toggle { width: 44px; height: 24px; border-radius: 12px; background: var(--card2); border: 1px solid var(--border); position: relative; flex-shrink: 0; }
+.toggle.on { background: rgba(82,204,120,0.25); border-color: var(--gold); }
+.toggle-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--gray2); position: absolute; top: 2px; left: 3px; transition: left 0.2s, background 0.2s; }
+.toggle.on .toggle-dot { background: var(--gold); left: 23px; }
+
+.companion-item { display: flex; align-items: center; justify-content: space-between; padding: 11px 14px; background: var(--card); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+.companion-left { display: flex; align-items: center; gap: 10px; }
+.companion-avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(82,204,120,0.15); border: 1px solid rgba(82,204,120,0.3); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--gold2); font-weight: 700; flex-shrink: 0; }
+.companion-name { font-size: 15px; color: var(--white); }
+.companion-hdcp { font-size: 12px; color: var(--gray); margin-top: 1px; }
+.del-btn { font-size: 18px; color: var(--gray2); background: none; border: none; padding: 6px; }
+
+.warn-box { background: rgba(224,85,85,0.07); border: 1px solid rgba(224,85,85,0.3); border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
+.warn-title { font-size: 13px; font-weight: 700; color: #e07070; margin-bottom: 4px; }
+.warn-text { font-size: 12px; color: #aa6060; line-height: 1.6; }
+.info-box { background: rgba(82,204,120,0.06); border: 1px solid rgba(82,204,120,0.2); border-radius: 10px; padding: 10px 14px; margin-bottom: 10px; }
+.info-title { font-size: 12px; color: var(--gold); font-weight: 600; margin-bottom: 3px; }
+.info-text { font-size: 12px; color: #3a7a52; line-height: 1.6; }
+.backup-time { font-size: 12px; color: var(--gray2); text-align: center; margin-top: 6px; margin-bottom: 12px; letter-spacing: 0.5px; }
+
+/* ===== AI 로딩 ===== */
+.ai-loading { text-align: center; padding: 20px; }
+.ai-spinner { display: inline-block; width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--gold); border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.ai-loading-text { font-size: 12px; color: var(--gray); margin-top: 8px; letter-spacing: 1px; }
+.hidden { display: none !important; }
+
+/* ===== 골프장 편집 — 스코어카드 입력 테이블 ===== */
+.sc-edit-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 4px; }
+.sc-edit-table th { background: rgba(82,204,120,0.12); color: var(--gold); padding: 6px 2px; text-align: center; border: 1px solid var(--border); font-size: 10px; }
+.sc-edit-table td { border: 1px solid var(--border); padding: 1px; }
+.sc-edit-table .hole-num { padding: 0; text-align: center; color: var(--gray); font-size: 11px; background: var(--card2); width: 24px; }
+.sc-cell { width: 100%; padding: 6px 2px; background: transparent; border: none; color: var(--white); font-size: 13px; text-align: center; font-family: inherit; outline: none; -webkit-appearance: none; }
+.sc-cell:focus { background: rgba(82,204,120,0.08); }
+.sc-cell::placeholder { color: var(--gray2); }
+.sc-total-row td { background: rgba(82,204,120,0.08); color: var(--gold2); font-weight: 700; text-align: center; padding: 5px 2px; font-size: 12px; }
+.sc-total-lbl { color: var(--gold); font-size: 11px; }
+.topbar-action { font-size: 13px; font-weight: 600; color: var(--gold); background: none; border: none; padding: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+<!-- ============================================================
+     SCREEN 0: 스플래시
+     ============================================================ -->
+<div class="screen active" id="screen-splash">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px;">
+    <div class="splash-ring">⛳</div>
+    <div class="splash-title">골프일기</div>
+    <div class="splash-sub">Golf Diary</div>
+    <div class="splash-line"></div>
+    <div class="splash-btns">
+      <button class="btn-gold" onclick="onSplashStart()">시작하기</button>
+    </div>
+    <div class="splash-foot">작은앱공방 · 강종훈</div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 1: 플레이어 설정
+     ============================================================ -->
+<div class="screen" id="screen-player">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('splash')">‹</button>
+    <div class="topbar-title small">내 정보 설정</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="scroll-area">
+    <div class="section-title">기본 정보</div>
+    <div class="input-group">
+      <div class="input-label">이름</div>
+      <input class="input-field" id="player-name" type="text" placeholder="이름을 입력하세요"/>
+    </div>
+    <div class="input-group">
+      <div class="input-label">성별</div>
+      <div class="chips" id="gender-chips">
+        <div class="chip active" onclick="selectGender('M',this)">👨 남성</div>
+        <div class="chip" onclick="selectGender('F',this)">👩 여성</div>
+      </div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">나이</div>
+      <input class="input-field" id="player-age" type="number" placeholder="나이"/>
+    </div>
+    <div class="input-group">
+      <div class="input-label">핸디캡 (선택)</div>
+      <input class="input-field" id="player-hdcp" type="number" placeholder="핸디캡 숫자"/>
+    </div>
+    <div class="section-title">홈 국가</div>
+    <div class="chips" id="country-chips">
+      <div class="chip active" onclick="selectCountry('KR',this)">🇰🇷 한국</div>
+      <div class="chip" onclick="selectCountry('JP',this)">🇯🇵 일본</div>
+      <div class="chip" onclick="selectCountry('CA',this)">🇨🇦 캐나다</div>
+      <div class="chip" onclick="selectCountry('PH',this)">🇵🇭 필리핀</div>
+    </div>
+  </div>
+  <div style="flex-shrink:0;padding:12px 16px 24px;">
+    <button class="btn-gold" onclick="savePlayer()">저장하고 시작 ›</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 2: 메인 (라운드 목록)
+     ============================================================ -->
+<div class="screen" id="screen-main">
+  <div class="topbar">
+    <div class="topbar-title">⛳ 골프일기</div>
+    <button class="topbar-btn" onclick="showScreen('search')" style="font-size:14px;">🔍</button>
+  </div>
+  <div class="scroll-area" id="main-scroll">
+    <div class="season-card" id="season-card"></div>
+    <div class="section-title">최근 라운드</div>
+    <div id="rounds-list"></div>
+  </div>
+  <div class="tabbar">
+    <button class="tab-item active" onclick="showScreen('main')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg></div>기록</button>
+    <button class="tab-item tab-new-round" onclick="showScreen('search')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>새라운드</button>
+    <button class="tab-item" onclick="showScreen('analysis')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg></div>분석</button>
+    <button class="tab-item" onclick="showScreen('settings')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>설정</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 3: 골프장 선택
+     ============================================================ -->
+<div class="screen" id="screen-search">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('main')">‹</button>
+    <div class="topbar-title small">골프장 선택</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="scroll-area">
+    <!-- 검색바 -->
+    <div style="margin-bottom:12px;margin-top:4px;">
+      <input class="search-input" id="club-search-input" type="text" placeholder="골프장 이름으로 검색..."
+        oninput="filterClubsList(this.value)" style="width:100%;"/>
+    </div>
+    <!-- 내 골프장 목록 -->
+    <div id="my-clubs-list"></div>
+
+    <!-- 골프장 추가 -->
+    <div class="section-title" style="margin-top:4px;">골프장 추가</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button class="btn-gold" style="flex:1;padding:12px 8px;font-size:13px;letter-spacing:0;" onclick="openClubEditor(null)">✏️ 직접 입력</button>
+      <button class="btn-outline" style="flex:1;padding:12px 8px;font-size:13px;letter-spacing:0;" onclick="importClubFile()">📂 파일 가져오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 4: 코스 선택 + 스코어카드
+     ============================================================ -->
+<div class="screen" id="screen-course">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('search')">‹</button>
+    <div class="topbar-title small" id="course-club-name">골프장</div>
+    <button class="topbar-btn" onclick="openClubEditor(curClub)" style="font-size:13px;">✏️</button>
+  </div>
+  <div class="scroll-area" id="course-scroll">
+    <!-- JS로 렌더링 -->
+  </div>
+  <div style="flex-shrink:0;padding:10px 16px 24px;">
+    <!-- 시작 홀 선택 -->
+    <div class="section-title" style="margin-bottom:8px;">시작 홀</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px;">
+      <button class="start-hole-btn active" id="btn-start-front" onclick="selectStartHole('front',this)">
+        <div style="font-size:18px;margin-bottom:2px;">1️⃣</div>
+        <div style="font-size:13px;font-weight:600;">전반부터</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">1번홀 → 18번홀</div>
+      </button>
+      <button class="start-hole-btn" id="btn-start-back" onclick="selectStartHole('back',this)">
+        <div style="font-size:18px;margin-bottom:2px;">🔟</div>
+        <div style="font-size:13px;font-weight:600;">후반부터</div>
+        <div style="font-size:11px;color:var(--gray);margin-top:2px;">10번홀 → 9번홀</div>
+      </button>
+    </div>
+    <button class="btn-gold" onclick="startWithCourse()">이 코스로 시작하기 ›</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: 골프장 직접 입력 / 코스 관리
+     ============================================================ -->
+<div class="screen" id="screen-club-edit">
+  <div class="topbar">
+    <button class="topbar-back" id="club-edit-back-btn" onclick="showScreen('search')">‹</button>
+    <div class="topbar-title small" id="club-edit-title">골프장 입력</div>
+    <button class="topbar-action" id="club-edit-save-btn" onclick="saveClubEditor()" style="font-size:13px;font-weight:600;color:var(--gold);background:none;border:none;padding:8px;">저장</button>
+  </div>
+  <div class="scroll-area" id="club-edit-scroll">
+    <!-- JS로 렌더링 -->
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 5: 라운드 정보 입력
+     ============================================================ -->
+<div class="screen" id="screen-round-info">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('course')">‹</button>
+    <div class="topbar-title small">라운드 정보</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="scroll-area">
+    <div class="input-group">
+      <div class="input-label">날짜</div>
+      <input class="input-field" id="round-date" type="date"/>
+    </div>
+    <div class="input-group">
+      <div class="input-label">티오프 타임</div>
+      <input class="input-field" id="round-teetime" type="time"/>
+    </div>
+    <div class="section-title">날씨</div>
+    <div class="weather-chips" id="weather-chips">
+      <div class="w-chip active" onclick="selectWeather('☀️ 맑음',this)">☀️ 맑음</div>
+      <div class="w-chip" onclick="selectWeather('🌤️ 대체로맑음',this)">🌤️ 대체로맑음</div>
+      <div class="w-chip" onclick="selectWeather('⛅ 구름',this)">⛅ 구름</div>
+      <div class="w-chip" onclick="selectWeather('☁️ 흐림',this)">☁️ 흐림</div>
+      <div class="w-chip" onclick="selectWeather('🌧️ 비',this)">🌧️ 비</div>
+      <div class="w-chip" onclick="selectWeather('🌨️ 눈',this)">🌨️ 눈</div>
+      <div class="w-chip" onclick="selectWeather('🌬️ 바람',this)">🌬️ 바람</div>
+    </div>
+    <div class="input-group">
+      <div class="input-label">기온 (°C)</div>
+      <input class="input-field" id="round-temp" type="number" placeholder="예) 18"/>
+    </div>
+    <div class="section-title">동반자</div>
+    <div id="companion-select-chips" class="chips"></div>
+    <div class="input-group">
+      <div class="input-label">직접 입력 (쉼표로 구분)</div>
+      <input class="input-field" id="companion-direct" type="text" placeholder="홍길동, 김철수"/>
+    </div>
+  </div>
+  <div style="flex-shrink:0;padding:12px 16px 24px;">
+    <button class="btn-gold" onclick="startScoring()">⛳ 스코어 입력 시작</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 6: 홀별 스코어 입력
+     ============================================================ -->
+<div class="screen" id="screen-scoring">
+  <div class="topbar">
+    <div id="scoring-club-label" style="font-size:12px;color:var(--gray);">골프장</div>
+    <div id="scoring-course-label" style="font-size:12px;color:var(--gray);">코스</div>
+    <button class="btn-ghost" onclick="openScoreSummary()" style="font-size:11px;padding:6px 10px;">요약</button>
+  </div>
+  <div class="scroll-area" id="scoring-scroll">
+    <div class="progress-bar-wrap">
+      <div class="progress-info"><span id="progress-txt">진행</span><span id="progress-frac">1/18</span></div>
+      <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:5%;"></div></div>
+    </div>
+    <div class="hole-header">
+      <div class="hole-num-lbl">HOLE</div>
+      <div class="hole-big" id="hole-num-big">1</div>
+      <div class="hole-details">
+        <div class="hole-detail-item"><div class="hole-detail-val" id="hole-par-val">Par 4</div><div class="hole-detail-lbl">PAR</div></div>
+        <div class="hole-detail-item"><div class="hole-detail-val" id="hole-yard-val">–</div><div class="hole-detail-lbl">YARD</div></div>
+        <div class="hole-detail-item"><div class="hole-detail-val" id="hole-hc-val">–</div><div class="hole-detail-lbl">H/C</div></div>
+      </div>
+    </div>
+    <div class="running-bar">
+      <div class="running-lbl">현재까지 누적</div>
+      <div class="running-val" id="running-total-txt">–</div>
+    </div>
+    <div id="steppers-area"></div>
+  </div>
+  <div style="flex-shrink:0;padding:10px 16px 20px;display:flex;gap:10px;">
+    <button class="btn-outline" style="flex:0 0 80px;" onclick="prevHole()">‹ 이전</button>
+    <button class="btn-gold" style="flex:1;" id="next-hole-btn" onclick="nextHole()">다음 홀 ›</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN 7: 라운드 완료 / 메모
+     ============================================================ -->
+<div class="screen" id="screen-complete">
+  <div class="topbar">
+    <div style="width:38px;"></div>
+    <div class="topbar-title small">라운드 완료</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="scroll-area">
+    <div class="complete-header">
+      <div class="complete-label">ROUND COMPLETE</div>
+      <div class="complete-score" id="complete-score">–</div>
+      <div class="complete-over" id="complete-over">–</div>
+      <div class="complete-course" id="complete-course-txt">–</div>
+    </div>
+    <div id="hole-mini-grid"></div>
+    <div class="section-title">메모</div>
+    <div class="input-group">
+      <div class="input-label">특이사항</div>
+      <textarea class="input-field" id="memo-note" placeholder="OB, 인상적인 홀, 날씨 등 자유롭게..."
+        oninput="autoResize(this)"></textarea>
+    </div>
+    <div class="input-group">
+      <div class="input-label">캐디 이름</div>
+      <input class="input-field" id="memo-caddie" type="text" placeholder="캐디 이름 (선택)"/>
+    </div>
+  </div>
+  <div style="flex-shrink:0;padding:12px 16px 24px;">
+    <button class="btn-gold" onclick="saveRound()">💾 저장하기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: 분석
+     ============================================================ -->
+<div class="screen" id="screen-analysis">
+  <div class="topbar">
+    <div class="topbar-title">📊 분석</div>
+    <div style="display:flex;gap:6px;">
+      <button class="btn-ghost" id="analysis-year-btn" onclick="setAnalysisYear('current')" style="font-size:11px;padding:5px 10px;">올해</button>
+      <button class="btn-ghost" id="analysis-all-btn" onclick="setAnalysisYear('all')" style="font-size:11px;padding:5px 10px;">전체</button>
+    </div>
+  </div>
+  <div class="scroll-area" id="analysis-scroll">
+    <!-- JS 렌더링 -->
+  </div>
+  <div class="tabbar">
+    <button class="tab-item" onclick="showScreen('main')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg></div>기록</button>
+    <button class="tab-item tab-new-round" onclick="showScreen('search')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>새라운드</button>
+    <button class="tab-item active" ><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg></div>분석</button>
+    <button class="tab-item" onclick="showScreen('settings')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>설정</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: 설정
+     ============================================================ -->
+<div class="screen" id="screen-settings">
+  <div class="topbar">
+    <div class="topbar-title">⚙️ 설정</div>
+  </div>
+  <div class="scroll-area" id="settings-scroll">
+    <!-- JS 렌더링 -->
+  </div>
+  <div class="tabbar">
+    <button class="tab-item" onclick="showScreen('main')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg></div>기록</button>
+    <button class="tab-item tab-new-round" onclick="showScreen('search')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>새라운드</button>
+    <button class="tab-item" onclick="showScreen('analysis')"><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></svg></div>분석</button>
+    <button class="tab-item active" ><div class="tab-icon-wrap"><svg class="tab-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>설정</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     SCREEN: 검색 (기록 검색)
+     ============================================================ -->
+<div class="screen" id="screen-record-search">
+  <div class="topbar">
+    <button class="topbar-back" onclick="showScreen('main')">‹</button>
+    <div class="topbar-title small">기록 검색</div>
+    <div style="width:38px;"></div>
+  </div>
+  <div class="scroll-area">
+    <div class="search-bar">
+      <input class="search-input" id="record-search-input" type="text" placeholder="골프장, 날짜, 동반자..."/>
+      <button class="search-btn" onclick="searchRecords()">🔍</button>
+    </div>
+    <div id="record-search-results"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     오버레이: 스코어 요약
+     ============================================================ -->
+<div class="overlay hidden" id="overlay-summary" onclick="closeScoreSummary()">
+  <div class="bottom-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:12px;letter-spacing:1px;">현재 스코어 요약</div>
+    <div id="summary-content"></div>
+    <button class="btn-outline" style="margin-top:12px;" onclick="closeScoreSummary()">닫기</button>
+  </div>
+</div>
+
+<!-- ============================================================
+     오버레이: JSON 붙여넣기 등록
+     ============================================================ -->
+<!-- ============================================================
+     오버레이: 동반자 추가
+     ============================================================ -->
+<div class="overlay hidden" id="overlay-add-companion" onclick="closeAddCompanion()">
+  <div class="bottom-sheet" onclick="event.stopPropagation()">
+    <div class="sheet-handle"></div>
+    <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:12px;">동반자 추가</div>
+    <div class="input-group">
+      <div class="input-label">이름</div>
+      <input class="input-field" id="new-companion-name" type="text" placeholder="이름"/>
+    </div>
+    <div class="input-group">
+      <div class="input-label">핸디캡 (선택)</div>
+      <input class="input-field" id="new-companion-hdcp" type="number" placeholder="핸디캡"/>
+    </div>
+    <button class="btn-gold" onclick="saveNewCompanion()">추가하기</button>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div id="toast"></div>
+
+</div><!-- /#app -->
+
+<script>
+'use strict';
+
+/* ============================================================
+   STORAGE KEYS  (앱 prefix 필수)
+   ============================================================ */
+var STORAGE_ROUNDS    = 'golfapp_rounds_v1';
+var STORAGE_PLAYER    = 'golfapp_player_v1';
+var STORAGE_SETTINGS  = 'golfapp_settings_v1';
+var STORAGE_CLUBS     = 'golfapp_clubs_v1';
+var STORAGE_COMPANIONS= 'golfapp_companions_v1';
+
+/* ============================================================
+   앱 전역 상태
+   ============================================================ */
+var rounds      = [];     // 라운드 기록 배열
+var player      = {};     // 플레이어 정보
+var settings    = {};     // 앱 설정
+var savedClubs  = [];     // 저장된 골프장 목록
+var companions  = [];     // 단골 동반자
+
+// 현재 라운드 입력 상태
+var curClub     = null;   // 선택된 골프장 객체
+var curCourse   = null;   // 선택된 코스 객체
+var curHole     = 0;      // 현재 홀 인덱스 (0-based)
+var curScores   = [];     // 홀별 스코어 [{scores:[{name,score}]}]
+var curPlayers  = [];     // 이번 라운드 플레이어 이름 배열
+var curRoundInfo= {};     // 날짜/날씨/기온/티오프
+var orderedHoles= [];     // 실제 플레이 순서 홀 배열 (전반/후반에 따라 재배열)
+
+// 분석 범위
+var analysisMode = 'current'; // 'current' | 'all'
+
+/* ============================================================
+   유틸
+   ============================================================ */
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+var DAYS = ['일','월','화','수','목','금','토'];
+function fmtDate(d) {
+  var dt = (d instanceof Date) ? d : new Date(d);
+  var y = dt.getFullYear();
+  var m = String(dt.getMonth()+1); if (m.length<2) m='0'+m;
+  var dd = String(dt.getDate()); if (dd.length<2) dd='0'+dd;
+  return y+'-'+m+'-'+dd+' ('+DAYS[dt.getDay()]+'요일)';
+}
+function fmtDateShort(d) {
+  var dt = (d instanceof Date) ? d : new Date(d);
+  var y = dt.getFullYear();
+  var m = String(dt.getMonth()+1); if (m.length<2) m='0'+m;
+  var dd = String(dt.getDate()); if (dd.length<2) dd='0'+dd;
+  return y+'.'+m+'.'+dd;
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 2200);
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+
+/* ============================================================
+   LocalStorage 헬퍼
+   ============================================================ */
+function loadRounds()     { try { return JSON.parse(localStorage.getItem(STORAGE_ROUNDS)||'[]'); } catch(e){ return []; } }
+function loadPlayer()     { try { return JSON.parse(localStorage.getItem(STORAGE_PLAYER)||'{}'); } catch(e){ return {}; } }
+function loadSettings()   { try { return JSON.parse(localStorage.getItem(STORAGE_SETTINGS)||'{}'); } catch(e){ return {}; } }
+function loadClubs()      { try { return JSON.parse(localStorage.getItem(STORAGE_CLUBS)||'[]'); } catch(e){ return []; } }
+function loadCompanions() { try { return JSON.parse(localStorage.getItem(STORAGE_COMPANIONS)||'[]'); } catch(e){ return []; } }
+
+function saveRoundsData(data) {
+  rounds = data;
+  localStorage.setItem(STORAGE_ROUNDS, JSON.stringify(data));
+}
+function savePlayerData(data) {
+  player = data;
+  localStorage.setItem(STORAGE_PLAYER, JSON.stringify(data));
+}
+function saveSettingsData(data) {
+  settings = data;
+  localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(data));
+}
+function saveClubsData(data) {
+  savedClubs = data;
+  localStorage.setItem(STORAGE_CLUBS, JSON.stringify(data));
+}
+function saveCompanionsData(data) {
+  companions = data;
+  localStorage.setItem(STORAGE_COMPANIONS, JSON.stringify(data));
+}
+
+
+/* ============================================================
+   화면 전환
+   ============================================================ */
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+  var el = document.getElementById('screen-'+name);
+  if (!el) return;
+  el.classList.add('active');
+  if (name === 'main')     { renderMain(); }
+  if (name === 'analysis') { renderAnalysis(); }
+  if (name === 'settings') { renderSettings(); }
+  if (name === 'search')   { var si = document.getElementById('club-search-input'); if(si) si.value=''; renderMyClubsList(); }
+  if (name === 'course')   {
+    startHole = 'front';
+    document.querySelectorAll('.start-hole-btn').forEach(function(b){ b.classList.remove('active'); });
+    var frontBtn = document.getElementById('btn-start-front');
+    if (frontBtn) frontBtn.classList.add('active');
+  }
+  // main/splash 는 히스토리에 쌓지 않음 (뒤로가기로 앱 탈출 방지)
+  if (name !== 'main' && name !== 'splash') {
+    history.pushState({ screen: name }, '');
+  } else {
+    history.replaceState({ screen: name }, '');
+  }
+}
+
+/* ============================================================
+   뒤로가기 처리 — 화면별 이전 화면으로
+   ============================================================ */
+// 화면별 '이전 화면' 맵
+var PREV_SCREEN = {
+  'player':     'splash',
+  'search':     'main',
+  'course':     'search',
+  'club-edit':  'search',
+  'round-info': 'course',
+  'scoring':    'round-info',
+  'complete':   'scoring',
+  'analysis':   'main',
+  'settings':   'main',
+  'record-search': 'main'
+};
+
+window.addEventListener('popstate', function(e) {
+  // 1. 오버레이가 열려있으면 오버레이만 닫기
+  var detailOv = document.getElementById('round-detail-overlay');
+  if (detailOv) { detailOv.remove(); history.pushState({}, ''); return; }
+
+  var overlayIds = ['overlay-summary', 'overlay-add-companion'];
+  for (var i = 0; i < overlayIds.length; i++) {
+    var ov = document.getElementById(overlayIds[i]);
+    if (ov && !ov.classList.contains('hidden')) {
+      ov.classList.add('hidden');
+      history.pushState({}, '');
+      return;
+    }
+  }
+
+  // 2. 현재 화면의 이전 화면으로 이동
+  var active = document.querySelector('.screen.active');
+  if (!active) return;
+  var curName = active.id.replace('screen-', '');
+  var prevName = PREV_SCREEN[curName] || 'main';
+
+  // main 이면 히스토리 스택 유지 (앱 탈출 방지)
+  if (curName === 'main' || curName === 'splash') {
+    history.pushState({ screen: curName }, '');
+    return;
+  }
+
+  showScreen(prevName);
+});
+
+/* ============================================================
+   스플래시
+   ============================================================ */
+function onSplashStart() {
+  if (player && player.name) {
+    showScreen('main');
+  } else {
+    showScreen('player');
+  }
+}
+
+function onSplashImport() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var imported = JSON.parse(ev.target.result);
+        var importedRounds = imported.rounds || [];
+        var existIds = new Set(rounds.map(function(r){ return r.id; }));
+        var merged = rounds.concat(importedRounds.filter(function(r){ return !existIds.has(r.id); }));
+        saveRoundsData(merged);
+        if (imported.companions) saveCompanionsData(imported.companions);
+        if (imported.clubs) saveClubsData(imported.clubs);
+        showToast('✅ ' + importedRounds.length + '개 라운드 불러옴');
+        showScreen('main');
+      } catch(er) {
+        showToast('❌ 파일 형식 오류');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+/* ============================================================
+   플레이어 설정
+   ============================================================ */
+var curGender  = 'M';
+var curCountry = 'KR';
+
+function selectGender(g, el) {
+  curGender = g;
+  document.querySelectorAll('#gender-chips .chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+}
+function selectCountry(c, el) {
+  curCountry = c;
+  document.querySelectorAll('#country-chips .chip').forEach(function(ch){ ch.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function savePlayer() {
+  var name = document.getElementById('player-name').value.trim();
+  if (!name) { showToast('이름을 입력해주세요'); return; }
+  var age  = document.getElementById('player-age').value;
+  var hdcp = document.getElementById('player-hdcp').value;
+  savePlayerData({ name:name, gender:curGender, age:age, hdcp:hdcp, country:curCountry });
+  showScreen('main');
+}
+
+/* ============================================================
+   메인 렌더링
+   ============================================================ */
+function renderMain() {
+  renderSeasonCard();
+  renderRoundsList();
+}
+
+function renderSeasonCard() {
+  var year = new Date().getFullYear();
+  var yearRounds = rounds.filter(function(r){ return new Date(r.date).getFullYear() === year; });
+  var total  = yearRounds.length;
+  var scores = yearRounds.map(function(r){ return r.totalScore; }).filter(function(s){ return s>0; });
+  var avg    = scores.length ? (scores.reduce(function(a,b){return a+b;},0)/scores.length).toFixed(1) : '–';
+  var best   = scores.length ? Math.min.apply(null,scores) : '–';
+  var el = document.getElementById('season-card');
+  el.innerHTML = '<div class="season-label">'+year+'년 시즌</div>'
+    +'<div class="season-stats">'
+    +'<div class="season-stat"><div class="season-val">'+total+'</div><div class="season-lbl">라운드</div></div>'
+    +'<div class="season-stat"><div class="season-val gold">'+avg+'</div><div class="season-lbl">평균타수</div></div>'
+    +'<div class="season-stat"><div class="season-val green">'+(best||'–')+'</div><div class="season-lbl">베스트</div></div>'
+    +'</div>';
+}
+
+function renderRoundsList() {
+  var el = document.getElementById('rounds-list');
+  if (!rounds.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">⛳</div><div class="empty-text">아직 기록된 라운드가 없습니다.<br>새 라운드를 시작해보세요!</div></div>';
+    return;
+  }
+  var sorted = rounds.slice().sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  var html = '';
+  sorted.forEach(function(r) {
+    var par  = r.coursePar || 72;
+    var diff = r.totalScore - par;
+    var diffStr = diff > 0 ? '+'+diff : (diff < 0 ? ''+diff : 'E');
+    var badgeCls = diff > 0 ? 'badge-red' : (diff < 0 ? 'badge-green' : 'badge-gray');
+    html += '<div class="round-card" id="rcard_'+r.id+'" onclick="openRoundDetail(\''+r.id+'\')" oncontextmenu="showRoundMenu(event,\''+r.id+'\');return false;">'
+      +'<div class="round-top">'
+      +'<div><div class="round-course">'+esc(r.clubName)+'</div>'
+      +'<div class="round-info">'+esc(r.courseName)+'</div></div>'
+      +'<div style="text-align:right;"><div class="round-score">'+r.totalScore+'</div>'
+      +'<span class="badge '+badgeCls+'">'+diffStr+'</span></div>'
+      +'</div>'
+      +'<div class="round-meta">'
+      +'<div class="round-tag">📅 '+fmtDateShort(r.date)+'</div>'
+      +(r.weather?'<div class="round-tag">'+esc(r.weather)+(r.temp?' '+r.temp+'°C':'')+'</div>':'')
+      +(r.companions&&r.companions.length?'<div class="round-tag">👥 '+esc(r.companions.join(', '))+'</div>':'')
+      +'</div>'
+      +'</div>';
+  });
+  el.innerHTML = html;
+}
+
+/* ============================================================
+   라운드 컨텍스트 메뉴 (길게 누르기)
+   ============================================================ */
+function showRoundMenu(e, id) {
+  // 기존 메뉴 제거
+  var old = document.getElementById('round-ctx-menu');
+  if (old) old.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'round-ctx-menu';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;';
+  overlay.innerHTML =
+    '<div style="width:100%;background:var(--card);border-radius:16px 16px 0 0;padding:16px 0 calc(16px + env(safe-area-inset-bottom,0px));">'
+    +'<div style="text-align:center;padding:0 0 12px;color:var(--gray);font-size:12px;border-bottom:1px solid var(--border);margin-bottom:8px;">라운드 관리</div>'
+    +'<button onclick="viewFullScorecard(\''+id+'\')" style="width:100%;padding:16px 20px;background:none;border:none;color:var(--white);font-size:15px;text-align:left;display:flex;align-items:center;gap:12px;">'
+    +'<span style="font-size:20px;">📊</span> 스코어카드 전체보기</button>'
+    +'<button onclick="editRoundInfo(\''+id+'\')" style="width:100%;padding:16px 20px;background:none;border:none;color:var(--white);font-size:15px;text-align:left;display:flex;align-items:center;gap:12px;">'
+    +'<span style="font-size:20px;">📋</span> 라운드 정보 수정</button>'
+    +'<button onclick="editRoundScores(\''+id+'\')" style="width:100%;padding:16px 20px;background:none;border:none;color:var(--white);font-size:15px;text-align:left;display:flex;align-items:center;gap:12px;">'
+    +'<span style="font-size:20px;">⛳</span> 홀별 스코어 수정</button>'
+    +'<button onclick="deleteRound(\''+id+'\')" style="width:100%;padding:16px 20px;background:none;border:none;color:#e05555;font-size:15px;text-align:left;display:flex;align-items:center;gap:12px;">'
+    +'<span style="font-size:20px;">🗑️</span> 삭제</button>'
+    +'<button onclick="closeRoundMenu()" style="width:100%;padding:16px 20px;background:none;border:none;color:var(--gray);font-size:15px;text-align:center;">취소</button>'
+    +'</div>';
+  overlay.addEventListener('click', function(ev) { if (ev.target === overlay) closeRoundMenu(); });
+  document.body.appendChild(overlay);
+}
+
+function deleteRoundFromDetail(id) {
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r) return;
+  if (confirm('이 라운드를 삭제할까요?\n'+r.clubName+' ('+fmtDateShort(r.date)+')')) {
+    saveRoundsData(rounds.filter(function(x){ return x.id!==id; }));
+    var ov = document.getElementById('round-detail-overlay');
+    if (ov) ov.remove();
+    renderMain();
+    showToast('삭제되었습니다');
+  }
+}
+
+function deleteRound(id) {
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r) return;
+  if (confirm('📋 '+r.clubName+' ('+fmtDateShort(r.date)+')\n\n이 라운드를 삭제할까요?')) {
+    saveRoundsData(rounds.filter(function(x){ return x.id!==id; }));
+    renderMain();
+    showToast('삭제되었습니다');
+  }
+}
+
+/* ============================================================
+   스코어카드 전체보기 (4명 전체 홀별 스코어)
+   ============================================================ */
+function viewFullScorecard(id) {
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r || !r.scores || !r.scores.length) return;
+
+  var playerNames = r.scores[0].scores.map(function(s){ return s.name; });
+  var myName = player.name || playerNames[0];
+
+  function renderScorecardRows(holes) {
+    var html = '';
+    // 헤더
+    html += '<tr style="background:var(--card2);">'
+      +'<th style="padding:6px 8px;text-align:center;font-size:11px;color:var(--gold);min-width:28px;">홀</th>'
+      +'<th style="padding:6px 4px;text-align:center;font-size:11px;color:var(--gray2);">Par</th>';
+    playerNames.forEach(function(n){
+      var isMe = n === myName;
+      html += '<th style="padding:6px 8px;text-align:center;font-size:11px;color:'+(isMe?'var(--gold)':'var(--white)')+';">'+esc(n)+'</th>';
+    });
+    html += '</tr>';
+
+    holes.forEach(function(hs) {
+      html += '<tr style="border-bottom:1px solid var(--border);">'
+        +'<td style="padding:7px 8px;text-align:center;font-size:13px;color:var(--gray);font-weight:600;">'+hs.holeNo+'</td>'
+        +'<td style="padding:7px 4px;text-align:center;font-size:12px;color:var(--gray2);">'+hs.par+'</td>';
+      playerNames.forEach(function(n){
+        var s = hs.scores.find(function(x){ return x.name===n; });
+        var sc = s ? s.score : '-';
+        var rel = s ? s.score - hs.par : 0;
+        var color = 'var(--white)';
+        var bg = 'transparent';
+        if (rel <= -2) { color='var(--blue)'; bg='rgba(85,136,204,0.15)'; }
+        else if (rel === -1) { color='var(--green)'; bg='rgba(76,175,114,0.15)'; }
+        else if (rel === 1) { color='var(--red)'; bg='rgba(224,85,85,0.1)'; }
+        else if (rel >= 2) { color='#ff8888'; bg='rgba(224,85,85,0.2)'; }
+        html += '<td style="padding:7px 8px;text-align:center;font-size:14px;font-weight:700;color:'+color+';background:'+bg+';">'+sc+'</td>';
+      });
+      html += '</tr>';
+    });
+    return html;
+  }
+
+  var front = r.scores.slice(0, 9);
+  var back  = r.scores.slice(9, 18);
+
+  // 합계 행
+  function totalRow(holes, label) {
+    var html = '<tr style="background:var(--card2);border-top:2px solid var(--border);">'
+      +'<td colspan="2" style="padding:7px 8px;font-size:12px;color:var(--gold);font-weight:700;">'+label+'</td>';
+    playerNames.forEach(function(n){
+      var tot = holes.reduce(function(sum, hs){
+        var s = hs.scores.find(function(x){ return x.name===n; });
+        return sum + (s ? s.score : 0);
+      }, 0);
+      html += '<td style="padding:7px 8px;text-align:center;font-size:14px;font-weight:700;color:var(--white);">'+tot+'</td>';
+    });
+    html += '</tr>';
+    return html;
+  }
+
+  var par = r.coursePar || 72;
+  var diff = r.totalScore - par;
+  var diffStr = (diff > 0 ? '+' : '') + diff;
+  var diffColor = diff > 0 ? 'var(--red)' : (diff < 0 ? 'var(--green)' : 'var(--white)');
+
+  var modal = document.createElement('div');
+  modal.id = 'scorecard-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,0.85);display:flex;align-items:flex-end;';
+  modal.innerHTML =
+    '<div style="width:100%;background:var(--dark);border-radius:16px 16px 0 0;max-height:92vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,0px);">'
+    // 헤더
+    +'<div style="position:sticky;top:0;background:var(--dark);z-index:1;padding:16px 16px 10px;border-bottom:1px solid var(--border);">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+    +'<div>'
+    +'<div style="font-size:15px;font-weight:700;color:var(--gold);">📊 스코어카드</div>'
+    +'<div style="font-size:11px;color:var(--gray);margin-top:2px;">'+esc(r.clubName)+' · '+esc(r.courseName)+' · '+fmtDateShort(r.date)+'</div>'
+    +'</div>'
+    +'<div style="text-align:right;">'
+    +'<div style="font-size:22px;font-weight:700;color:var(--gold2);">'+r.totalScore+'</div>'
+    +'<div style="font-size:12px;color:'+diffColor+';">'+diffStr+'</div>'
+    +'</div>'
+    +'</div>'
+    +'</div>'
+    // 전반
+    +'<div style="padding:12px 12px 0;">'
+    +'<div style="font-size:11px;color:var(--gray);margin-bottom:6px;letter-spacing:1px;">OUT (전반)</div>'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    + renderScorecardRows(front)
+    + totalRow(front, 'OUT')
+    +'</table>'
+    +'</div>'
+    // 후반
+    +(back.length > 0
+      ? '<div style="padding:12px 12px 0;">'
+        +'<div style="font-size:11px;color:var(--gray);margin-bottom:6px;letter-spacing:1px;">IN (후반)</div>'
+        +'<table style="width:100%;border-collapse:collapse;">'
+        + renderScorecardRows(back)
+        + totalRow(back, 'IN')
+        +'</table></div>'
+      : '')
+    // 총계
+    +'<div style="padding:12px;">'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<tr style="background:rgba(82,204,120,0.1);border:1px solid rgba(82,204,120,0.3);">'
+    +'<td colspan="2" style="padding:10px 8px;font-size:13px;color:var(--gold);font-weight:700;">TOTAL</td>'
+    + playerNames.map(function(n){
+        var tot = r.scores.reduce(function(sum,hs){
+          var s = hs.scores.find(function(x){ return x.name===n; });
+          return sum+(s?s.score:0);
+        },0);
+        var p = r.scores.reduce(function(sum,hs){return sum+hs.par;},0);
+        var d = tot-p;
+        var dc = d>0?'var(--red)':(d<0?'var(--green)':'var(--gray)');
+        return '<td style="padding:10px 8px;text-align:center;">'
+          +'<div style="font-size:16px;font-weight:700;color:var(--white);">'+tot+'</div>'
+          +'<div style="font-size:10px;color:'+dc+';">'+(d>0?'+':'')+d+'</div>'
+          +'</td>';
+      }).join('')
+    +'</tr></table></div>'
+    +'<div style="padding:0 12px 16px;">'
+    +'<button onclick="document.getElementById(\'scorecard-modal\').remove()" style="width:100%;padding:14px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--gray);font-size:14px;">닫기</button>'
+    +'</div>'
+    +'</div>';
+
+  modal.addEventListener('click', function(e){ if(e.target===modal) modal.remove(); });
+  document.body.appendChild(modal);
+}
+
+
+function closeRoundDetailOverlay() {
+  var ov = document.getElementById('round-detail-overlay');
+  if (ov) ov.remove();
+}
+
+function editRoundInfo(id) {
+  closeRoundDetailOverlay();
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r) return;
+
+  var old = document.getElementById('edit-info-modal');
+  if (old) old.remove();
+
+  var weatherOpts = ['☀️ 맑음','⛅ 구름','🌧️ 비','🌨️ 눈','🌬️ 바람'];
+  var wSel = weatherOpts.map(function(w){
+    return '<option value="'+w+'"'+(r.weather===w?' selected':'')+'>'+w+'</option>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.id = 'edit-info-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;';
+  modal.innerHTML =
+    '<div style="width:100%;background:var(--dark);border-radius:16px 16px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom,0px));max-height:85vh;overflow-y:auto;">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">'
+    +'<div style="font-size:16px;font-weight:700;color:var(--gold);">📋 라운드 정보 수정</div>'
+    +'<button onclick="document.getElementById(\'edit-info-modal\').remove()" style="background:none;border:none;color:var(--gray);font-size:22px;line-height:1;">✕</button>'
+    +'</div>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">골프장</div>'
+    +'<div style="font-size:14px;color:var(--white);margin-bottom:14px;padding:10px 12px;background:var(--card);border-radius:8px;">'+esc(r.clubName)+' · '+esc(r.courseName)+'</div>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">날짜</div>'
+    +'<input id="ei-date" type="date" class="input-field" value="'+(r.date?r.date.substring(0,10):'')+'" style="margin-bottom:12px;"/>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">날씨</div>'
+    +'<select id="ei-weather" class="input-field" style="margin-bottom:12px;"><option value="">선택</option>'+wSel+'</select>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">기온 (°C)</div>'
+    +'<input id="ei-temp" type="number" class="input-field" value="'+(r.temp||'')+'" placeholder="예: 18" style="margin-bottom:12px;"/>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">티오프 시간</div>'
+    +'<input id="ei-teetime" type="time" class="input-field" value="'+(r.teetime||'')+'" style="margin-bottom:12px;"/>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">동반자 (쉼표로 구분)</div>'
+    +'<input id="ei-companions" type="text" class="input-field" value="'+(r.companions?esc(r.companions.join(', ')):'')+'" placeholder="홍길동, 이순신" style="margin-bottom:12px;"/>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">메모</div>'
+    +'<textarea id="ei-memo" class="input-field" rows="2" placeholder="오늘의 라운드 메모..." style="resize:none;margin-bottom:12px;">'+(r.memo||'')+'</textarea>'
+    +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">캐디 이름</div>'
+    +'<input id="ei-caddie" type="text" class="input-field" value="'+(r.caddie||'')+'" placeholder="캐디 이름" style="margin-bottom:20px;"/>'
+    +'<button class="btn-gold" onclick="saveRoundInfo(\''+id+'\')">💾 저장</button>'
+    +'</div>';
+  document.body.appendChild(modal);
+}
+
+function saveRoundInfo(id) {
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r) return;
+  r.date      = document.getElementById('ei-date').value || r.date;
+  r.weather   = document.getElementById('ei-weather').value;
+  r.temp      = document.getElementById('ei-temp').value ? Number(document.getElementById('ei-temp').value) : '';
+  r.teetime   = document.getElementById('ei-teetime').value;
+  r.companions= document.getElementById('ei-companions').value.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  r.memo      = document.getElementById('ei-memo').value.trim();
+  r.caddie    = document.getElementById('ei-caddie').value.trim();
+  saveRoundsData(rounds);
+  document.getElementById('edit-info-modal').remove();
+  renderMain();
+  showToast('✅ 라운드 정보가 수정되었습니다');
+}
+
+/* ============================================================
+   홀별 스코어 수정
+   ============================================================ */
+/* ============================================================
+   홀별 스코어 수정 — 홀 단위 네비게이션 방식
+   ============================================================ */
+var esRoundId  = null;   // 수정 중인 라운드 id
+var esHoleIdx  = 0;      // 현재 보고 있는 홀 인덱스 (0-based)
+var esScores   = [];     // 수정 중 임시 스코어 사본 [{holeNo,par,yard,scores:[{name,score}]}]
+
+function editRoundScores(id) {
+  closeRoundDetailOverlay();
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r || !r.scores || !r.scores.length) return;
+
+  var old = document.getElementById('edit-scores-modal');
+  if (old) old.remove();
+
+  // 깊은 복사
+  esRoundId = id;
+  esHoleIdx = 0;
+  esScores = r.scores.map(function(hs) {
+    return {
+      holeNo: hs.holeNo,
+      par:    hs.par,
+      yard:   hs.yard,
+      scores: hs.scores.map(function(s){ return { name:s.name, score:s.score }; })
+    };
+  });
+
+  var modal = document.createElement('div');
+  modal.id = 'edit-scores-modal';
+  modal.style.cssText = 'position:fixed;inset:0;z-index:9100;background:rgba(0,0,0,0.75);display:flex;flex-direction:column;';
+  document.body.appendChild(modal);
+  esRender();
+}
+
+function esRender() {
+  var modal = document.getElementById('edit-scores-modal');
+  if (!modal) return;
+  var r = rounds.find(function(x){ return x.id===esRoundId; });
+  var hs = esScores[esHoleIdx];
+  var total = esScores.length;
+  var pct = Math.round(((esHoleIdx+1)/total)*100);
+  var isLast = esHoleIdx === total-1;
+
+  // 플레이어별 누적 계산
+  function cumulative(name) {
+    var sum = 0; var par = 0;
+    for (var i=0;i<=esHoleIdx;i++){
+      par += esScores[i].par;
+      var s = esScores[i].scores.find(function(x){return x.name===name;});
+      if(s) sum+=s.score;
+    }
+    var d = sum-par;
+    return sum+'타 ('+(d>0?'+'+d:(d<0?d:'E'))+')';
+  }
+
+  // 스테퍼 HTML
+  var steppers = '';
+  hs.scores.forEach(function(ps, pi) {
+    var rel = ps.score - hs.par;
+    var relLabel='', relCls='';
+    if(rel<=-2){relLabel='🦅 이글';relCls='rel-eagle';}
+    else if(rel===-1){relLabel='🐦 버디';relCls='rel-birdie';}
+    else if(rel===0){relLabel='파';relCls='rel-par';}
+    else if(rel===1){relLabel='+1 보기';relCls='rel-bogey';}
+    else{relLabel='+'+rel+' 더블+';relCls='rel-double';}
+
+    steppers += '<div class="stepper-card">'
+      +'<div class="stepper-info">'
+      +'<div class="stepper-name">'+esc(ps.name)+(pi===0?' <span style="font-size:10px;color:var(--gold);">(나)</span>':'')+'</div>'
+      +'<div class="stepper-sub">'+cumulative(ps.name)+'</div>'
+      +'</div>'
+      +'<div class="stepper-controls">'
+      +'<button class="step-btn" onclick="esAdjNew('+esHoleIdx+','+pi+',-1)">−</button>'
+      +'<div style="text-align:center;">'
+      +'<div class="step-val" id="esv_'+pi+'">'+ps.score+'</div>'
+      +'<div class="score-rel '+relCls+'" id="esr_'+pi+'">'+relLabel+'</div>'
+      +'</div>'
+      +'<button class="step-btn" onclick="esAdjNew('+esHoleIdx+','+pi+',1)">+</button>'
+      +'</div>'
+      +'</div>';
+  });
+
+  modal.innerHTML =
+    // 상단 헤더
+    '<div style="background:var(--dark);flex-shrink:0;padding:14px 16px 10px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);">'
+      +'<div>'
+        +'<div style="font-size:13px;font-weight:500;color:var(--white);">'+esc(r.clubName)+'</div>'
+        +'<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+esc(r.courseName)+' · '+fmtDateShort(r.date)+'</div>'
+      +'</div>'
+      +'<button onclick="document.getElementById(\'edit-scores-modal\').remove()" style="background:none;border:none;color:var(--gray);font-size:24px;line-height:1;padding:4px;">✕</button>'
+    +'</div>'
+    // 진행 바
+    +'<div style="background:var(--dark);flex-shrink:0;padding:8px 16px 10px;">'
+      +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--gray);margin-bottom:4px;">'
+        +'<span>홀 수정</span><span>'+(esHoleIdx+1)+' / '+total+'홀</span>'
+      +'</div>'
+      +'<div style="height:3px;background:var(--card2);border-radius:2px;">'
+        +'<div style="width:'+pct+'%;height:100%;background:var(--gold);border-radius:2px;transition:width 0.2s;"></div>'
+      +'</div>'
+    +'</div>'
+    // 스크롤 영역
+    +'<div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;">'
+      // 홀 헤더 (탭하면 홀 선택 드롭다운)
+      +'<div class="hole-header" style="margin-bottom:12px;cursor:pointer;" onclick="esShowHolePicker()">'
+        +'<div class="hole-num-lbl">HOLE <span style="font-size:9px;opacity:0.7;">▼ 탭하여 이동</span></div>'
+        +'<div class="hole-big">'+(hs.holeNo||esHoleIdx+1)+'</div>'
+        +'<div class="hole-details">'
+          +'<div class="hole-detail-item"><div class="hole-detail-val">Par '+hs.par+'</div><div class="hole-detail-lbl">PAR</div></div>'
+          +(hs.yard?'<div class="hole-detail-item"><div class="hole-detail-val">'+hs.yard+'y</div><div class="hole-detail-lbl">YARD</div></div>':'')
+        +'</div>'
+      +'</div>'
+      // 스테퍼들
+      + steppers
+    +'</div>'
+    // 하단 버튼
+    +'<div style="flex-shrink:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--dark);border-top:1px solid var(--border);display:flex;gap:10px;">'
+      +'<button class="btn-outline" style="flex:0 0 80px;" onclick="esPrevHole()">‹ 이전</button>'
+      +(isLast
+        ? '<button class="btn-gold" style="flex:1;" onclick="saveRoundScores(\''+esRoundId+'\')">💾 저장하기</button>'
+        : '<button class="btn-gold" style="flex:1;" onclick="esNextHole()">다음 홀 ›</button>'
+      )
+    +'</div>';
+}
+
+function esAdjNew(holeIdx, playerIdx, delta) {
+  var ps = esScores[holeIdx].scores[playerIdx];
+  ps.score = Math.max(1, Math.min(20, ps.score + delta));
+  // 스코어 표시 업데이트
+  var valEl = document.getElementById('esv_'+playerIdx);
+  var relEl = document.getElementById('esr_'+playerIdx);
+  if (!valEl || !relEl) return;
+  valEl.textContent = ps.score;
+  var rel = ps.score - esScores[holeIdx].par;
+  var relLabel='', relCls='';
+  if(rel<=-2){relLabel='🦅 이글';relCls='rel-eagle';}
+  else if(rel===-1){relLabel='🐦 버디';relCls='rel-birdie';}
+  else if(rel===0){relLabel='파';relCls='rel-par';}
+  else if(rel===1){relLabel='+1 보기';relCls='rel-bogey';}
+  else{relLabel='+'+rel+' 더블+';relCls='rel-double';}
+  relEl.textContent = relLabel;
+  relEl.className = 'score-rel '+relCls;
+}
+
+function esPrevHole() {
+  if (esHoleIdx > 0) { esHoleIdx--; esRender(); }
+}
+function esNextHole() {
+  if (esHoleIdx < esScores.length-1) { esHoleIdx++; esRender(); }
+}
+
+function esShowHolePicker() {
+  var old = document.getElementById('es-hole-picker');
+  if (old) { old.remove(); return; }
+  var picker = document.createElement('div');
+  picker.id = 'es-hole-picker';
+  picker.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;';
+  var btns = '';
+  // 3열 그리드로 홀 번호 표시
+  esScores.forEach(function(hs, i) {
+    var isCur = i === esHoleIdx;
+    btns += '<button onclick="esJumpHole('+i+')" style="'
+      +'padding:10px 4px;background:'+(isCur?'var(--gold)':'var(--card2)')+';'
+      +'border:1px solid '+(isCur?'var(--gold)':'var(--border)')+';'
+      +'border-radius:8px;color:'+(isCur?'#0d2016':'var(--white)')+';'
+      +'font-size:14px;font-weight:'+(isCur?'700':'400')+';cursor:pointer;">'
+      +(hs.holeNo||i+1)+'</button>';
+  });
+  picker.innerHTML =
+    '<div style="width:100%;background:var(--dark);border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
+      +'<div style="font-size:14px;font-weight:500;color:var(--gold);">홀 선택</div>'
+      +'<button onclick="document.getElementById(\'es-hole-picker\').remove()" style="background:none;border:none;color:var(--gray);font-size:22px;line-height:1;">✕</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">'
+    +btns
+    +'</div>'
+    +'</div>';
+  picker.addEventListener('click', function(e){ if(e.target===picker) picker.remove(); });
+  document.body.appendChild(picker);
+}
+
+function esJumpHole(idx) {
+  esHoleIdx = idx;
+  var picker = document.getElementById('es-hole-picker');
+  if (picker) picker.remove();
+  esRender();
+}
+
+function saveRoundScores(id) {
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r) return;
+  // esScores 임시 데이터를 실제 라운드에 반영
+  r.scores = esScores.map(function(hs) {
+    return {
+      holeNo: hs.holeNo,
+      par:    hs.par,
+      yard:   hs.yard,
+      scores: hs.scores.map(function(s){ return { name:s.name, score:s.score }; })
+    };
+  });
+  // totalScore 재계산 — 첫 번째 플레이어 기준
+  var firstName = r.scores[0].scores[0] && r.scores[0].scores[0].name;
+  var newTotal = 0;
+  r.scores.forEach(function(hs){
+    var ms = hs.scores.find(function(s){ return s.name===firstName; });
+    if (ms) newTotal += ms.score;
+  });
+  r.totalScore = newTotal;
+  saveRoundsData(rounds);
+  var modal = document.getElementById('edit-scores-modal');
+  if (modal) modal.remove();
+  renderMain();
+  showToast('✅ 스코어가 수정되었습니다');
+}
+
+/* ============================================================
+   라운드 상세 (탭)
+   ============================================================ */
+function openRoundDetail(id) {
+  var r = rounds.find(function(x){ return x.id===id; });
+  if (!r) return;
+
+  var old = document.getElementById('round-detail-overlay');
+  if (old) old.remove();
+
+  var par  = r.coursePar || 72;
+  var diff = r.totalScore - par;
+  var diffStr = diff > 0 ? '+'+diff : (diff < 0 ? ''+diff : 'E');
+  var badgeCls = diff > 0 ? 'badge-red' : (diff < 0 ? 'badge-green' : 'badge-gray');
+
+  var overlay = document.createElement('div');
+  overlay.id = 'round-detail-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,0.6);display:flex;flex-direction:column;overflow:hidden;';
+
+  // 스코어카드 HTML 생성
+  // r.scores 구조: [{holeNo, par, scores:[{name, score}]}] (홀 배열)
+  var scHtml = '';
+  if (r.scores && r.scores.length) {
+    var holes = r.scores; // 18홀 배열
+    // 플레이어 이름 추출
+    var pNames = (holes[0] && holes[0].scores) ? holes[0].scores.map(function(s){ return s.name; }) : [];
+
+    var thStyle = 'background:rgba(82,204,120,0.12);color:var(--gold);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
+    var thSumStyle = 'background:rgba(82,204,120,0.2);color:var(--gold2);padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:10px;';
+    var tdStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-size:11px;';
+    var tdSumStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold2);font-size:11px;';
+    var tdTotStyle = 'padding:5px 2px;text-align:center;border:1px solid var(--border);font-weight:700;color:var(--gold3);font-size:11px;';
+
+    function buildHalf(startIdx, endIdx, sumLabel) {
+      var h = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-bottom:4px;">';
+      h += '<table style="width:100%;border-collapse:collapse;table-layout:fixed;">';
+      // 컬럼 너비 고정 (이름 1개 + 홀 9개 + 합계 1개 = 11컬럼)
+      h += '<colgroup><col style="width:14%"/>';
+      for (var c=0;c<9;c++) h += '<col style="width:8%"/>';
+      h += '<col style="width:10%"/></colgroup>';
+      h += '<thead><tr><th style="'+thStyle+'font-size:9px;">이름</th>';
+      for (var i=startIdx; i<endIdx; i++) {
+        h += '<th style="'+thStyle+'">'+(holes[i]?holes[i].holeNo:i+1)+'</th>';
+      }
+      h += '<th style="'+thSumStyle+'">'+sumLabel+'</th></tr></thead><tbody>';
+      // Par 행
+      h += '<tr><td style="'+tdStyle+';color:var(--gray2);font-size:10px;">Par</td>';
+      for (var i=startIdx; i<endIdx; i++) h += '<td style="'+tdStyle+';color:var(--gray);font-size:11px;">'+(holes[i]?holes[i].par:'-')+'</td>';
+      var parSum = holes.slice(startIdx,endIdx).reduce(function(s,h){return s+(h.par||0);},0);
+      h += '<td style="'+tdSumStyle+'">'+parSum+'</td></tr>';
+      // 플레이어별 행
+      pNames.forEach(function(pn) {
+        h += '<tr><td style="'+tdStyle+';color:var(--gold2);font-weight:600;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'+esc(pn)+'</td>';
+        var pSum = 0;
+        for (var i=startIdx; i<endIdx; i++) {
+          var sc = holes[i] && holes[i].scores ? holes[i].scores.find(function(s){return s.name===pn;}) : null;
+          var v = sc ? sc.score : '-';
+          pSum += sc ? (sc.score||0) : 0;
+          h += '<td style="'+tdStyle+'font-size:11px;">'+v+'</td>';
+        }
+        h += '<td style="'+tdSumStyle+'">'+pSum+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+      return h;
+    }
+
+    scHtml += buildHalf(0, 9, 'OUT');
+    scHtml += buildHalf(9, 18, 'IN');
+
+    // TOTAL 행
+    scHtml += '<div style="display:flex;gap:6px;margin-top:4px;">';
+    pNames.forEach(function(pn) {
+      var tot = holes.reduce(function(s,h){
+        var sc = h.scores ? h.scores.find(function(x){return x.name===pn;}) : null;
+        return s + (sc ? sc.score||0 : 0);
+      }, 0);
+      scHtml += '<div style="flex:1;text-align:center;background:rgba(82,204,120,0.08);border:1px solid rgba(82,204,120,0.2);border-radius:8px;padding:6px 4px;">'
+        +'<div style="font-size:10px;color:var(--gray2);">'+esc(pn)+'</div>'
+        +'<div style="font-size:18px;font-weight:700;color:var(--gold2);">'+tot+'</div>'
+        +'</div>';
+    });
+    scHtml += '</div>';
+  }
+
+  overlay.innerHTML =
+    '<div style="flex:1;min-height:0;" onclick="document.getElementById(\'round-detail-overlay\').remove()"></div>'
+    +'<div style="background:var(--dark);border-radius:20px 20px 0 0;border-top:1px solid var(--border);max-height:88dvh;display:flex;flex-direction:column;">'
+      +'<div style="flex-shrink:0;padding:12px 16px 0;">'
+        +'<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>'
+        +'<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:4px;">'
+          +'<div>'
+            +'<div style="font-size:16px;font-weight:600;color:var(--white);">'+esc(r.clubName)+'</div>'
+            +'<div style="font-size:12px;color:var(--gray);margin-top:2px;">'+esc(r.courseName||'')+'</div>'
+          +'</div>'
+          +'<div style="text-align:right;">'
+            +'<div style="font-family:Playfair Display,serif;font-size:32px;color:var(--gold);line-height:1;">'+r.totalScore+'</div>'
+            +'<span class="badge '+badgeCls+'">'+diffStr+'</span>'
+          +'</div>'
+        +'</div>'
+        +'<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;">'
+          +'<span class="round-tag">📅 '+fmtDateShort(r.date)+'</span>'
+          +(r.weather?'<span class="round-tag">'+esc(r.weather)+(r.temp?' '+r.temp+'°C':'')+'</span>':'')
+          +(r.companions&&r.companions.length?'<span class="round-tag">👥 '+esc(r.companions.join(', '))+'</span>':'')
+        +'</div>'
+      +'</div>'
+      +'<div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 8px;">'
+        +scHtml
+        +(r.memo?'<div style="margin-top:12px;font-size:13px;color:var(--gray);line-height:1.7;background:var(--card);border-radius:10px;padding:10px 12px;">'+esc(r.memo)+'</div>':'')
+      +'</div>'
+      +'<div style="flex-shrink:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;border-top:1px solid var(--border);">'
+        +'<button onclick="editRoundInfo(\''+r.id+'\')" style="flex:1;padding:12px 6px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:13px;cursor:pointer;">📋 정보 수정</button>'
+        +'<button onclick="editRoundScores(\''+r.id+'\')" style="flex:1;padding:12px 6px;background:var(--card);border:1px solid var(--border);border-radius:10px;color:var(--white);font-size:13px;cursor:pointer;">⛳ 스코어 수정</button>'
+        +'<button onclick="deleteRoundFromDetail(\''+r.id+'\')" style="flex:0 0 48px;padding:12px 0;background:rgba(224,85,85,0.1);border:1px solid rgba(224,85,85,0.3);border-radius:10px;color:var(--red);font-size:16px;cursor:pointer;">🗑️</button>'
+      +'</div>'
+    +'</div>';
+
+  document.body.appendChild(overlay);
+}
+
+/* ============================================================
+   최근 골프장 (새라운드 화면)
+   ============================================================ */
+function renderRecentClubs() {
+  var el = document.getElementById('recent-clubs-list');
+  var used = {};
+  rounds.forEach(function(r){
+    if (!used[r.clubName]) used[r.clubName] = r;
+  });
+  var keys = Object.keys(used).slice(0,5);
+  if (!keys.length) { el.innerHTML = '<div style="color:var(--gray2);font-size:13px;padding:8px 0;">아직 기록이 없습니다</div>'; return; }
+  var html = '';
+  keys.forEach(function(k) {
+    var r = used[k];
+    html += '<div class="list-card" onclick="quickSelectClub(\''+esc(k)+'\''+')">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;">'
+      +'<div><div style="font-size:14px;color:var(--white);">'+esc(k)+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin-top:2px;">'+esc(r.courseName||'')+'</div></div>'
+      +'<div style="font-size:18px;color:var(--gray2);">›</div>'
+      +'</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+function quickSelectClub(name) {
+  var club = savedClubs.find(function(c){ return c.name===name; });
+  if (club) {
+    curClub = club;
+    showScreen('course');
+    renderCourseScreen();
+  } else {
+    showScreen('search');
+  }
+}
+
+/* ============================================================
+   골프장 즐겨찾기
+   ============================================================ */
+function loadFavorites() {
+  try { return JSON.parse(localStorage.getItem('golfapp_favorites')||'[]'); } catch(e){ return []; }
+}
+function saveFavorites(arr) {
+  localStorage.setItem('golfapp_favorites', JSON.stringify(arr));
+}
+function toggleFavorite(clubId, e) {
+  if (e) { e.stopPropagation(); }
+  var favs = loadFavorites();
+  var idx = favs.indexOf(clubId);
+  if (idx >= 0) favs.splice(idx, 1);
+  else favs.unshift(clubId);
+  saveFavorites(favs);
+  renderMyClubsList(document.getElementById('club-search-input') ? document.getElementById('club-search-input').value : '');
+}
+function isFavorite(clubId) {
+  return loadFavorites().indexOf(clubId) >= 0;
+}
+
+/* ============================================================
+   골프장 선택 화면 — 내 목록 렌더링
+   ============================================================ */
+function renderMyClubsList(filterStr) {
+  var el = document.getElementById('my-clubs-list');
+  if (!el) return;
+
+  // 라운드 횟수 집계
+  var playCount = {};
+  rounds.forEach(function(r) { playCount[r.clubName] = (playCount[r.clubName]||0)+1; });
+
+  var favs = loadFavorites();
+
+  // 필터
+  var list = savedClubs.slice();
+  if (filterStr && filterStr.trim()) {
+    var q = filterStr.trim().toLowerCase();
+    list = list.filter(function(c) {
+      return (c.name||'').toLowerCase().indexOf(q)>=0 || (c.region||'').toLowerCase().indexOf(q)>=0;
+    });
+  }
+
+  if (!list.length) {
+    el.innerHTML = '<div style="color:var(--gray);font-size:13px;padding:8px 0 4px;">'
+      +(filterStr ? '검색 결과가 없습니다.' : '저장된 골프장이 없습니다.')+'</div>';
+    return;
+  }
+
+  // 정렬: 즐겨찾기 먼저 → 라운드 횟수 많은 순 → 이름 순
+  list.sort(function(a, b) {
+    var aFav = favs.indexOf(a.id||a.name) >= 0 ? 0 : 1;
+    var bFav = favs.indexOf(b.id||b.name) >= 0 ? 0 : 1;
+    if (aFav !== bFav) return aFav - bFav;
+    var aC = playCount[a.name]||0;
+    var bC = playCount[b.name]||0;
+    if (bC !== aC) return bC - aC;
+    return (a.name||'').localeCompare(b.name||'');
+  });
+
+  var hasFav = list.some(function(c){ return favs.indexOf(c.id||c.name)>=0; });
+  var hasPlayed = list.some(function(c){ return (playCount[c.name]||0)>0; });
+
+  var html = '';
+  var shownFavHeader = false;
+  var shownRecentHeader = false;
+  var shownAllHeader = false;
+
+  list.forEach(function(club) {
+    var realIdx = savedClubs.indexOf(club);
+    var clubKey = club.id || club.name;
+    var isFav = favs.indexOf(clubKey) >= 0;
+    var count = playCount[club.name]||0;
+    var courseCount = club.courses ? club.courses.length : 1;
+
+    // 섹션 헤더
+    if (isFav && !shownFavHeader) {
+      html += '<div style="font-size:10px;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;margin:4px 0 6px;padding-left:2px;">⭐ 즐겨찾기</div>';
+      shownFavHeader = true;
+    } else if (!isFav && count > 0 && !shownRecentHeader) {
+      html += '<div style="font-size:10px;color:var(--gray);letter-spacing:1.5px;text-transform:uppercase;margin:10px 0 6px;padding-left:2px;">최근 라운드</div>';
+      shownRecentHeader = true;
+    } else if (!isFav && count === 0 && !shownAllHeader && (hasFav || hasPlayed)) {
+      html += '<div style="font-size:10px;color:var(--gray2);letter-spacing:1.5px;text-transform:uppercase;margin:10px 0 6px;padding-left:2px;">전체</div>';
+      shownAllHeader = true;
+    }
+
+    html += '<div class="list-card" onclick="selectSavedClub('+realIdx+')" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:15px;color:var(--white);font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(club.name)+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin-top:2px;">'
+        +esc(club.region||club.country||'')
+        +' · '+courseCount+'개 코스'
+        +(count>0?' · <span style="color:var(--gold);">'+count+'회</span>':'')
+      +'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">'
+      +'<button onclick="event.stopPropagation();toggleFavorite(\''+esc(clubKey)+'\')" '
+        +'style="background:none;border:none;font-size:18px;padding:4px;line-height:1;color:'+(isFav?'#f5c842':'var(--gray2)')+';">'
+        +(isFav?'★':'☆')+'</button>'
+      +'<button onclick="event.stopPropagation();deleteClub('+realIdx+')" style="background:none;border:none;color:var(--gray2);font-size:16px;padding:4px 6px;">✕</button>'
+      +'</div>'
+      +'</div>';
+  });
+  el.innerHTML = html;
+}
+
+function filterClubsList(val) {
+  renderMyClubsList(val);
+}
+
+function selectSavedClub(idx) {
+  var club = savedClubs[idx];
+  if (!club) return;
+  curClub = club;
+  showScreen('course');
+  renderCourseScreen();
+}
+
+function deleteClub(idx) {
+  if (!confirm(savedClubs[idx].name + '을(를) 삭제할까요?')) return;
+  var clubs = savedClubs.slice();
+  clubs.splice(idx, 1);
+  saveClubsData(clubs);
+  renderMyClubsList();
+  showToast('삭제했습니다');
+}
+
+
+/* ============================================================
+   코스 선택 & 스코어카드
+   ============================================================ */
+var selectedCourseIdx = 0;
+
+function renderCourseScreen() {
+  document.getElementById('course-club-name').textContent = curClub ? curClub.name : '';
+  var el = document.getElementById('course-scroll');
+  if (!curClub || !curClub.courses || !curClub.courses.length) {
+    el.innerHTML = '<div style="color:var(--gray);padding:20px;">코스 정보가 없습니다.</div>';
+    return;
+  }
+  selectedCourseIdx = 0;
+  var distUnit = settings.distUnit || 'yd';
+  var html = '';
+  html += '<div class="section-title">코스 선택</div>';
+  curClub.courses.forEach(function(c, i) {
+    var totalPar = c.par || (c.holes ? c.holes.reduce(function(s,h){return s+h.par;},0) : 72);
+    var totalYardRaw = c.holes ? c.holes.reduce(function(s,h){return s+(h.yard||0);},0) : 0;
+    var totalDistDisp = totalYardRaw ? (distUnit==='m' ? Math.round(totalYardRaw*0.9144)+'m' : totalYardRaw+'yd') : '';
+    html += '<div class="course-option'+(i===0?' active':'')+'" id="course-opt-'+i+'" onclick="selectCourseOpt('+i+')">'
+      +'<div>'
+      +'<div style="font-size:14px;color:var(--white);font-weight:500;">'+esc(c.name)+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin-top:2px;">'+(c.holes?c.holes.length:18)+'홀 · Par '+totalPar+(totalDistDisp?' · '+totalDistDisp:'')+'</div>'
+      +'</div>'
+      +'<div id="course-check-'+i+'" style="font-size:18px;">'+(i===0?'✅':'')+'</div>'
+      +'</div>';
+  });
+
+  // 스코어카드
+  if (curClub.aiGenerated) {
+    html += '<div class="ai-badge" style="margin-bottom:10px;">✨ AI 제공 데이터 — 확인 후 저장하세요</div>';
+  }
+  html += '<div id="scorecard-area"></div>';
+  el.innerHTML = html;
+  renderScorecard(0);
+}
+
+function selectCourseOpt(idx) {
+  selectedCourseIdx = idx;
+  var opts = document.querySelectorAll('.course-option');
+  opts.forEach(function(o,i){
+    o.classList.toggle('active', i===idx);
+    var chk = document.getElementById('course-check-'+i);
+    if (chk) chk.textContent = (i===idx?'✅':'');
+  });
+  renderScorecard(idx);
+}
+
+function renderScorecard(idx) {
+  var course = curClub.courses[idx];
+  var el = document.getElementById('scorecard-area');
+  if (!course || !course.holes || !course.holes.length) { el.innerHTML = ''; return; }
+  var front = course.holes.slice(0,9);
+  var back  = course.holes.slice(9,18);
+  var distUnit = settings.distUnit || 'yd';
+  function convDist(yd) {
+    if (!yd) return '–';
+    return distUnit === 'm' ? Math.round(yd * 0.9144) : yd;
+  }
+  function tableHtml(holes, label) {
+    var parSum  = holes.reduce(function(s,h){return s+h.par;},0);
+    var distSum = holes.reduce(function(s,h){return s+(h.yard||0);},0);
+    var distLabel = distUnit === 'm' ? 'Meter' : 'Yard';
+    var distSumDisp = distUnit === 'm' ? Math.round(distSum * 0.9144) : distSum;
+    var html = '<div style="font-size:11px;color:var(--gold);letter-spacing:1px;margin:12px 0 6px;">▶ '+label+'</div>';
+    html += '<table class="score-table"><tr><th>홀</th><th>Par</th><th>'+distLabel+'</th><th>H/C</th></tr>';
+    holes.forEach(function(h){
+      html += '<tr><td>'+h.no+'</td><td>'+h.par+'</td><td>'+convDist(h.yard)+'</td><td>'+(h.hc||'–')+'</td></tr>';
+    });
+    html += '<tr class="total-row"><td colspan="2">'+label.split(' ')[0]+'</td><td>'+distSumDisp+'</td><td>'+parSum+'</td></tr>';
+    html += '</table>';
+    return html;
+  }
+  var html = '<div class="section-title" style="margin-top:16px;">스코어카드</div>';
+  html += tableHtml(front,'OUT (1~9홀)');
+  if (back.length) html += tableHtml(back,'IN (10~18홀)');
+  el.innerHTML = html;
+  curCourse = course;
+}
+
+/* ============================================================
+   시작 홀 선택 (전반/후반)
+   ============================================================ */
+var startHole = 'front'; // 'front' | 'back'
+
+function selectStartHole(type, el) {
+  startHole = type;
+  document.querySelectorAll('.start-hole-btn').forEach(function(b){ b.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function startWithCourse() {
+  if (!curClub || !curClub.courses) { showToast('코스를 선택해주세요'); return; }
+  curCourse = curClub.courses[selectedCourseIdx];
+  // 골프장 저장 (없으면 추가, 있으면 패스)
+  var existsIdx = savedClubs.findIndex(function(c){ return c.name===curClub.name; });
+  var clubs = savedClubs.slice();
+  if (existsIdx < 0) {
+    clubs.push(curClub);
+    saveClubsData(clubs);
+  }
+  showScreen('round-info');
+  initRoundInfo();
+}
+
+/* ============================================================
+   라운드 정보 입력
+   ============================================================ */
+var curWeather = '☀️ 맑음';
+
+function initRoundInfo() {
+  // 오늘 날짜 기본값
+  var today = new Date();
+  var y = today.getFullYear();
+  var m = String(today.getMonth()+1); if(m.length<2)m='0'+m;
+  var d = String(today.getDate()); if(d.length<2)d='0'+d;
+  document.getElementById('round-date').value = y+'-'+m+'-'+d;
+
+  // 티오프 기본값
+  document.getElementById('round-teetime').value = '07:30';
+
+  // 날씨 리셋
+  curWeather = '☀️ 맑음';
+  document.querySelectorAll('.w-chip').forEach(function(c,i){ c.classList.toggle('active', i===0); });
+
+  // 기온 리셋
+  document.getElementById('round-temp').value = '';
+
+  // 동반자 칩 렌더링
+  renderCompanionChips();
+}
+
+function selectWeather(w, el) {
+  curWeather = w;
+  document.querySelectorAll('.w-chip').forEach(function(c){ c.classList.remove('active'); });
+  el.classList.add('active');
+}
+
+function renderCompanionChips() {
+  var el = document.getElementById('companion-select-chips');
+  var html = '';
+  companions.forEach(function(c) {
+    html += '<div class="chip" onclick="toggleCompanionChip(this,\''+esc(c.name)+'\''+')" data-name="'+esc(c.name)+'">'+esc(c.name)+'</div>';
+  });
+  el.innerHTML = html;
+}
+
+function toggleCompanionChip(el, name) {
+  el.classList.toggle('active');
+}
+
+function startScoring() {
+  var date    = document.getElementById('round-date').value;
+  var teetime = document.getElementById('round-teetime').value;
+  var temp    = document.getElementById('round-temp').value;
+
+  // 동반자 수집
+  var selected = [];
+  document.querySelectorAll('#companion-select-chips .chip.active').forEach(function(c){
+    selected.push(c.dataset.name);
+  });
+  var direct = document.getElementById('companion-direct').value.trim();
+  if (direct) {
+    direct.split(',').forEach(function(n){ var t=n.trim(); if(t) selected.push(t); });
+  }
+
+  curRoundInfo = { date:date, teetime:teetime, weather:curWeather, temp:temp?parseInt(temp):null, startHole:startHole };
+  curPlayers = [player.name||'나'].concat(selected);
+
+  // 홀 순서 결정 — 전반/후반 시작에 따라 재배열
+  var holes = curCourse.holes ? curCourse.holes.slice() : [];
+  if (startHole === 'back' && holes.length === 18) {
+    // 후반부터: 10~18번홀 → 1~9번홀
+    orderedHoles = holes.slice(9).concat(holes.slice(0,9));
+  } else {
+    orderedHoles = holes;
+  }
+
+  // 스코어 초기화
+  curScores = [];
+  orderedHoles.forEach(function(h) {
+    var pscores = curPlayers.map(function(n){ return { name:n, score:h.par }; });
+    curScores.push({ holeNo:h.no, par:h.par, scores:pscores });
+  });
+  curHole = 0;
+
+  // 헤더 레이블
+  document.getElementById('scoring-club-label').textContent = curClub.name;
+  var startLabel = startHole==='back' ? curCourse.name+' (후반→전반)' : curCourse.name;
+  document.getElementById('scoring-course-label').textContent = startLabel;
+
+  showScreen('scoring');
+  renderHole();
+}
+
+/* ============================================================
+   홀별 스코어 입력
+   ============================================================ */
+function renderHole() {
+  var total  = curScores.length;
+  var pct    = Math.round(((curHole+1)/total)*100);
+  document.getElementById('progress-fill').style.width = pct+'%';
+  document.getElementById('progress-frac').textContent = (curHole+1)+'/'+total+'홀';
+
+  var hd = orderedHoles[curHole] || { no:curHole+1, par:4, yard:0, hc:0 };
+  document.getElementById('hole-num-big').textContent = hd.no || (curHole+1);
+  document.getElementById('hole-par-val').textContent = 'Par '+hd.par;
+  document.getElementById('hole-yard-val').textContent = hd.yard ? hd.yard+'y' : '–';
+  document.getElementById('hole-hc-val').textContent   = hd.hc ? 'H/C '+hd.hc : '–';
+
+  // 누적 타수 (나)
+  var myName = player.name||'나';
+  var myTotal = 0;
+  var myParTotal = 0;
+  for (var i=0; i<=curHole; i++) {
+    var hs = curScores[i];
+    myParTotal += hs.par;
+    var ms = hs.scores.find(function(s){ return s.name===myName; });
+    if (ms) myTotal += ms.score;
+  }
+  var diff = myTotal - myParTotal;
+  var diffStr = diff>0 ? '+'+diff : (diff<0?''+diff:'E');
+  document.getElementById('running-total-txt').textContent = '통산 '+myTotal+'타 · '+diffStr;
+
+  // 스테퍼 렌더링
+  var html = '';
+  var hs = curScores[curHole];
+  hs.scores.forEach(function(ps, idx) {
+    var rel = ps.score - hs.par;
+    var relLabel = '';
+    var relCls   = '';
+    if (rel <= -2)     { relLabel='🦅 이글'; relCls='rel-eagle'; }
+    else if (rel===-1) { relLabel='🐦 버디'; relCls='rel-birdie'; }
+    else if (rel===0)  { relLabel='파'; relCls='rel-par'; }
+    else if (rel===1)  { relLabel='+1 보기'; relCls='rel-bogey'; }
+    else               { relLabel='+'+rel+' 더블+'; relCls='rel-double'; }
+
+    // 그 플레이어의 누적
+    var pTotal = 0;
+    var pParTotal = 0;
+    for (var i=0; i<=curHole; i++) {
+      pParTotal += curScores[i].par;
+      var found = curScores[i].scores.find(function(s){return s.name===ps.name;});
+      if (found) pTotal += found.score;
+    }
+    var pDiff = pTotal - pParTotal;
+    var pDiffStr = pDiff>0?'+'+pDiff:(pDiff<0?''+pDiff:'E');
+
+    html += '<div class="stepper-card">'
+      +'<div class="stepper-info">'
+      +'<div class="stepper-name">'+esc(ps.name)+(idx===0?' <span style="font-size:10px;color:var(--gold);">(나)</span>':'')+'</div>'
+      +'<div class="stepper-sub">누적 '+pDiffStr+'</div>'
+      +'</div>'
+      +'<div class="stepper-controls">'
+      +'<button class="step-btn" onclick="adjustScore('+curHole+','+idx+',-1)">−</button>'
+      +'<div style="text-align:center;">'
+      +'<div class="step-val" id="sv-'+curHole+'-'+idx+'">'+ps.score+'</div>'
+      +'<div class="score-rel '+relCls+'" id="sr-'+curHole+'-'+idx+'">'+relLabel+'</div>'
+      +'</div>'
+      +'<button class="step-btn" onclick="adjustScore('+curHole+','+idx+',1)">+</button>'
+      +'</div>'
+      +'</div>';
+  });
+  document.getElementById('steppers-area').innerHTML = html;
+
+  // 마지막 홀 버튼
+  var isLast = curHole === curScores.length - 1;
+  document.getElementById('next-hole-btn').textContent = isLast ? '완료 ✓' : '다음 홀 ›';
+}
+
+function adjustScore(holeIdx, playerIdx, delta) {
+  var ps = curScores[holeIdx].scores[playerIdx];
+  ps.score = Math.max(1, ps.score + delta);
+  var par = curScores[holeIdx].par;
+  var rel = ps.score - par;
+  var relLabel='', relCls='';
+  if (rel<=-2)       { relLabel='🦅 이글'; relCls='rel-eagle'; }
+  else if (rel===-1) { relLabel='🐦 버디'; relCls='rel-birdie'; }
+  else if (rel===0)  { relLabel='파'; relCls='rel-par'; }
+  else if (rel===1)  { relLabel='+1 보기'; relCls='rel-bogey'; }
+  else               { relLabel='+'+rel+' 더블+'; relCls='rel-double'; }
+  document.getElementById('sv-'+holeIdx+'-'+playerIdx).textContent = ps.score;
+  var relEl = document.getElementById('sr-'+holeIdx+'-'+playerIdx);
+  relEl.textContent = relLabel;
+  relEl.className = 'score-rel '+relCls;
+
+  // 누적 업데이트
+  var myName = player.name||'나';
+  var myTotal=0, myParTotal=0;
+  for (var i=0; i<=curHole; i++) {
+    myParTotal += curScores[i].par;
+    var ms = curScores[i].scores.find(function(s){return s.name===myName;});
+    if (ms) myTotal += ms.score;
+  }
+  var diff = myTotal-myParTotal;
+  document.getElementById('running-total-txt').textContent = '통산 '+myTotal+'타 · '+(diff>0?'+'+diff:(diff<0?''+diff:'E'));
+}
+
+function prevHole() {
+  if (curHole > 0) { curHole--; renderHole(); document.getElementById('scoring-scroll').scrollTop=0; }
+}
+function nextHole() {
+  var isLast = curHole === curScores.length-1;
+  if (isLast) { showCompleteScreen(); }
+  else { curHole++; renderHole(); document.getElementById('scoring-scroll').scrollTop=0; }
+}
+
+/* ============================================================
+   스코어 요약 오버레이
+   ============================================================ */
+function openScoreSummary() {
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<tr style="background:rgba(82,204,120,0.1);">'
+    +'<th style="padding:6px;text-align:center;color:var(--gold);border:1px solid var(--border);">홀</th>'
+    +'<th style="padding:6px;text-align:center;color:var(--gold);border:1px solid var(--border);">Par</th>';
+  curPlayers.forEach(function(n){
+    html += '<th style="padding:6px;text-align:center;color:var(--gold);border:1px solid var(--border);">'+esc(n.slice(0,3))+'</th>';
+  });
+  html += '</tr>';
+  for (var i=0; i<=curHole; i++) {
+    var hs = curScores[i];
+    html += '<tr><td style="padding:5px;text-align:center;border:1px solid var(--border);color:var(--white);">'+hs.holeNo+'</td>'
+      +'<td style="padding:5px;text-align:center;border:1px solid var(--border);color:var(--gray);">'+hs.par+'</td>';
+    hs.scores.forEach(function(ps){
+      var rel=ps.score-hs.par;
+      var bg=''; var fc='var(--white)';
+      if(rel<=-2){bg='rgba(85,136,204,0.2)';fc='var(--blue)';}
+      else if(rel===-1){bg='rgba(76,175,114,0.2)';fc='var(--green)';}
+      else if(rel===1){bg='rgba(224,85,85,0.1)';fc='var(--red)';}
+      else if(rel>=2){bg='rgba(224,85,85,0.2)';fc='#ff8888';}
+      html += '<td style="padding:5px;text-align:center;border:1px solid var(--border);background:'+bg+';color:'+fc+';">'+ps.score+'</td>';
+    });
+    html += '</tr>';
+  }
+  // 합계
+  html += '<tr style="background:rgba(82,204,120,0.08);">'
+    +'<td colspan="2" style="padding:5px;text-align:center;border:1px solid var(--border);color:var(--gold);font-weight:700;">합계</td>';
+  curPlayers.forEach(function(n){
+    var tot = 0;
+    for(var i=0;i<=curHole;i++){
+      var s=curScores[i].scores.find(function(ps){return ps.name===n;});
+      if(s) tot+=s.score;
+    }
+    html += '<td style="padding:5px;text-align:center;border:1px solid var(--border);color:var(--gold2);font-weight:700;">'+tot+'</td>';
+  });
+  html += '</tr></table>';
+  document.getElementById('summary-content').innerHTML = html;
+  document.getElementById('overlay-summary').classList.remove('hidden');
+}
+function closeScoreSummary() { document.getElementById('overlay-summary').classList.add('hidden'); }
+
+/* ============================================================
+   완료 화면
+   ============================================================ */
+function showCompleteScreen() {
+  var myName = player.name||'나';
+  var myTotal = 0;
+  var par = 0;
+  var holeScores = [];
+  curScores.forEach(function(hs){
+    par += hs.par;
+    var ms = hs.scores.find(function(s){return s.name===myName;});
+    var sc = ms ? ms.score : hs.par;
+    myTotal += sc;
+    holeScores.push({ score:sc, par:hs.par, no:hs.holeNo });
+  });
+  var diff = myTotal - par;
+  var diffStr = diff>0?'+'+diff+' 오버파':(diff<0?diff+' 언더파':'이븐파');
+  var diffColor = diff>0?'var(--red)':(diff<0?'var(--green)':'var(--white)');
+
+  document.getElementById('complete-score').textContent = myTotal;
+  document.getElementById('complete-over').innerHTML = '<span style="color:'+diffColor+';">'+diffStr+'</span>';
+  document.getElementById('complete-course-txt').textContent = curClub.name+' · '+curCourse.name;
+
+  // 홀 미니 그리드 — 전반(1~9) / 후반(10~18) 9개씩 2줄
+  function makeMiniCell(h) {
+    var rel = h.score - h.par;
+    var cls = '';
+    if (rel <= -2) cls = 'eagle';
+    else if (rel === -1) cls = 'birdie';
+    else if (rel === 1) cls = 'bogey';
+    else if (rel >= 2) cls = 'double';
+    return '<div class="hole-mini '+cls+'">'
+      +'<div class="hm-no">'+h.no+'</div>'
+      +'<div class="hm-sc">'+h.score+'</div>'
+      +'</div>';
+  }
+
+  var front = holeScores.slice(0, 9);
+  var back  = holeScores.slice(9, 18);
+  var frontOut = front.reduce(function(s,h){return s+h.score;},0);
+  var backIn   = back.reduce(function(s,h){return s+h.score;},0);
+
+  var html = '';
+  // 전반
+  html += '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;letter-spacing:1px;">OUT (전반)</div>';
+  html += '<div class="hole-mini-grid">';
+  front.forEach(function(h){ html += makeMiniCell(h); });
+  html += '</div>';
+  html += '<div style="text-align:right;font-size:12px;color:var(--gray);margin-bottom:10px;">합계 <b style="color:var(--white);">'+frontOut+'</b></div>';
+
+  if (back.length > 0) {
+    html += '<div style="font-size:11px;color:var(--gray);margin-bottom:4px;letter-spacing:1px;">IN (후반)</div>';
+    html += '<div class="hole-mini-grid">';
+    back.forEach(function(h){ html += makeMiniCell(h); });
+    html += '</div>';
+    html += '<div style="text-align:right;font-size:12px;color:var(--gray);margin-bottom:10px;">합계 <b style="color:var(--white);">'+backIn+'</b></div>';
+  }
+
+  document.getElementById('hole-mini-grid').innerHTML = html;
+  document.getElementById('memo-note').value = '';
+  document.getElementById('memo-caddie').value = '';
+  showScreen('complete');
+}
+
+/* ============================================================
+   라운드 저장
+   ============================================================ */
+function saveRound() {
+  var myName = player.name||'나';
+  var myTotal=0, par=0;
+  curScores.forEach(function(hs){
+    par+=hs.par;
+    var ms=hs.scores.find(function(s){return s.name===myName;});
+    if(ms) myTotal+=ms.score;
+  });
+
+  // 특별 기록 체크 (이글, 홀인원)
+  var specials = [];
+  curScores.forEach(function(hs){
+    var ms=hs.scores.find(function(s){return s.name===myName;});
+    if(!ms) return;
+    var rel=ms.score-hs.par;
+    if(ms.score===1) specials.push({type:'holeinone', hole:hs.holeNo, date:curRoundInfo.date});
+    else if(rel<=-2) specials.push({type:'eagle',     hole:hs.holeNo, date:curRoundInfo.date});
+    else if(rel===-1)specials.push({type:'birdie',    hole:hs.holeNo, date:curRoundInfo.date});
+  });
+
+  var companions = curPlayers.filter(function(n){ return n !== myName; });
+  var newRound = {
+    id:          'r_'+Date.now(),
+    date:        curRoundInfo.date,
+    teetime:     curRoundInfo.teetime,
+    weather:     curRoundInfo.weather,
+    temp:        curRoundInfo.temp,
+    clubName:    curClub.name,
+    clubRegion:  curClub.region||'',
+    courseName:  curCourse.name,
+    coursePar:   par,
+    totalScore:  myTotal,
+    scores:      curScores,
+    companions:  companions,
+    memo:        document.getElementById('memo-note').value.trim(),
+    caddie:      document.getElementById('memo-caddie').value.trim(),
+    specials:    specials
+  };
+  var newRounds = rounds.slice();
+  newRounds.push(newRound);
+  saveRoundsData(newRounds);
+  showToast('✅ 라운드가 저장되었습니다!');
+  showScreen('main');
+}
+
+/* ============================================================
+   분석
+   ============================================================ */
+function setAnalysisYear(mode) {
+  analysisMode = mode;
+  renderAnalysis();
+}
+
+function renderAnalysis() {
+  var year = new Date().getFullYear();
+  var data = analysisMode==='current'
+    ? rounds.filter(function(r){ return new Date(r.date).getFullYear()===year; })
+    : rounds.slice();
+
+  document.getElementById('analysis-year-btn').style.borderColor = analysisMode==='current'?'var(--gold)':'var(--border)';
+  document.getElementById('analysis-year-btn').style.color = analysisMode==='current'?'var(--gold)':'var(--gray)';
+  document.getElementById('analysis-all-btn').style.borderColor = analysisMode==='all'?'var(--gold)':'var(--border)';
+  document.getElementById('analysis-all-btn').style.color = analysisMode==='all'?'var(--gold)':'var(--gray)';
+
+  var el = document.getElementById('analysis-scroll');
+  if (!data.length) {
+    el.innerHTML = '<div class="empty-state"><div class="empty-icon">📊</div><div class="empty-text">분석할 라운드 기록이 없습니다</div></div>';
+    return;
+  }
+
+  var scores = data.map(function(r){return r.totalScore;}).filter(function(s){return s>0;});
+  var avg    = scores.length?(scores.reduce(function(a,b){return a+b;},0)/scores.length).toFixed(1):'–';
+  var best   = scores.length?Math.min.apply(null,scores):'–';
+  var worst  = scores.length?Math.max.apply(null,scores):'–';
+
+  // 이글/홀인원/버디 집계
+  var eagleList=[], holeinoneList=[], birdieCount=0;
+  data.forEach(function(r){
+    (r.specials||[]).forEach(function(sp){
+      if(sp.type==='holeinone') holeinoneList.push(sp);
+      else if(sp.type==='eagle') eagleList.push(sp);
+      else if(sp.type==='birdie') birdieCount++;
+    });
+  });
+
+  // 월별 평균
+  var monthData = {};
+  data.forEach(function(r){
+    var mo = new Date(r.date).getMonth()+1;
+    if(!monthData[mo]) monthData[mo]={sum:0,cnt:0};
+    monthData[mo].sum+=r.totalScore;
+    monthData[mo].cnt++;
+  });
+
+  var html = '';
+  // 핵심 지표
+  html += '<div class="highlight-grid">'
+    +'<div class="highlight-card"><div class="highlight-icon">🏆</div><div class="highlight-val">'+best+'</div><div class="highlight-lbl">베스트</div></div>'
+    +'<div class="highlight-card"><div class="highlight-icon">📈</div><div class="highlight-val">'+avg+'</div><div class="highlight-lbl">평균타수</div></div>'
+    +'<div class="highlight-card"><div class="highlight-icon">🦅</div><div class="highlight-val">'+eagleList.length+'회</div><div class="highlight-lbl">이글</div></div>'
+    +'<div class="highlight-card"><div class="highlight-icon">⛳</div><div class="highlight-val">'+holeinoneList.length+'회</div><div class="highlight-lbl">홀인원</div></div>'
+    +'</div>';
+
+  // 월별 평균 막대
+  var months = Object.keys(monthData).map(Number).sort(function(a,b){return a-b;});
+  if (months.length) {
+    var maxAvg = Math.max.apply(null, months.map(function(m){ return monthData[m].sum/monthData[m].cnt; }));
+    html += '<div class="stat-card">';
+    html += '<div style="font-size:12px;color:var(--gray);margin-bottom:10px;letter-spacing:1px;">월별 평균 타수</div>';
+    months.forEach(function(m){
+      var mAvg = (monthData[m].sum/monthData[m].cnt).toFixed(1);
+      var pct  = Math.round((mAvg/maxAvg)*90);
+      html += '<div class="bar-row">'
+        +'<div class="bar-label">'+m+'월</div>'
+        +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;"></div></div>'
+        +'<div class="bar-val">'+mAvg+'</div>'
+        +'</div>';
+    });
+    html += '</div>';
+  }
+
+  // 최근 5라운드
+  var recent = data.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,5);
+  html += '<div class="stat-card">';
+  html += '<div style="font-size:12px;color:var(--gray);margin-bottom:10px;letter-spacing:1px;">최근 라운드 추이</div>';
+  recent.reverse().forEach(function(r){
+    var par = r.coursePar||72;
+    var diff = r.totalScore-par;
+    html += '<div class="bar-row">'
+      +'<div class="bar-label" style="width:60px;font-size:10px;">'+fmtDateShort(r.date).slice(5)+'</div>'
+      +'<div class="bar-track"><div class="bar-fill" style="width:'+(Math.round((r.totalScore/110)*90))+'%;"></div></div>'
+      +'<div class="bar-val" style="width:40px;text-align:right;">'+r.totalScore+'<span style="color:var(--gray);font-size:9px;">('+( diff>0?'+':'')+diff+')</span></div>'
+      +'</div>';
+  });
+  html += '</div>';
+
+  // 이글/홀인원 기록
+  if (eagleList.length || holeinoneList.length) {
+    html += '<div class="stat-card">';
+    html += '<div style="font-size:12px;color:var(--gray);margin-bottom:10px;letter-spacing:1px;">특별 기록</div>';
+    holeinoneList.forEach(function(sp){
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+        +'<div><div style="font-size:13px;color:var(--white);">⛳ 홀인원</div>'
+        +'<div style="font-size:11px;color:var(--gray);">'+fmtDateShort(sp.date)+' · '+sp.hole+'번홀</div></div>'
+        +'<span class="badge badge-gold">기념일</span></div>';
+    });
+    eagleList.forEach(function(sp){
+      html += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+        +'<div><div style="font-size:13px;color:var(--white);">🦅 이글</div>'
+        +'<div style="font-size:11px;color:var(--gray);">'+fmtDateShort(sp.date)+' · '+sp.hole+'번홀</div></div>'
+        +'<span class="badge badge-blue">이글</span></div>';
+    });
+    html += '</div>';
+  }
+
+  // 라운드 수
+  html += '<div style="text-align:center;padding:12px;font-size:12px;color:var(--gray2);">'
+    +(analysisMode==='current'?year+'년 · ':'')+data.length+'개 라운드 기준'
+    +'</div>';
+
+  el.innerHTML = html;
+}
+
+/* ============================================================
+   설정
+   ============================================================ */
+function renderSettings() {
+  var isDark = !document.body.classList.contains('light-mode');
+  var distUnit = settings.distUnit || 'yd';
+  var html = '';
+
+  /* ── 내 정보 ── */
+  html += '<div class="section-title">내 정보</div>';
+  html += '<div class="settings-block">'
+    +'<div class="settings-row">'
+    +'<div class="settings-left"><div class="settings-icon">👤</div>'
+    +'<div><div class="settings-name">'+(player.name||'이름 없음')+'</div>'
+    +'<div class="settings-sub">'+(player.gender==='M'?'남성':'여성')+' · '+(player.age||'–')+'세 · 핸디캡 '+(player.hdcp||'–')+'</div>'
+    +'</div></div>'
+    +'<button class="btn-ghost" style="font-size:12px;" onclick="showScreen(\'player\')">수정</button>'
+    +'</div></div>';
+
+  /* ── 단골 동반자 ── */
+  html += '<div class="section-title">단골 동반자</div>';
+  if (companions.length === 0) {
+    html += '<div style="font-size:13px;color:var(--gray2);padding:8px 4px 4px;">등록된 동반자가 없습니다</div>';
+  } else {
+    companions.forEach(function(c, i) {
+      html += '<div class="companion-item">'
+        +'<div class="companion-left">'
+        +'<div class="companion-avatar">'+esc(c.name.charAt(0))+'</div>'
+        +'<div><div class="companion-name">'+esc(c.name)+'</div>'
+        +'<div class="companion-hdcp">핸디캡 '+(c.hdcp||'–')+'</div></div>'
+        +'</div>'
+        +'<button class="del-btn" onclick="deleteCompanion('+i+')">✕</button>'
+        +'</div>';
+    });
+  }
+  html += '<button class="btn-outline" style="margin-bottom:16px;padding:10px;font-size:13px;" onclick="openAddCompanion()">+ 동반자 추가</button>';
+
+  /* ── 화면 설정 ── */
+  html += '<div class="section-title">화면 설정</div>';
+  html += '<div class="settings-block">'
+    +'<div class="settings-row">'
+    +'<div class="settings-left"><div class="settings-icon">🌙</div>'
+    +'<div><div class="settings-name">다크모드</div><div class="settings-sub">'+(isDark?'검정/골드 테마 (현재)':'라이트 테마 (현재)')+'</div></div></div>'
+    +'<div class="toggle '+(isDark?'on':'')+'" onclick="toggleDarkMode()" style="cursor:pointer;"><div class="toggle-dot"></div></div>'
+    +'</div>'
+    +'<div class="settings-row" style="border-top:1px solid var(--border);">'
+    +'<div class="settings-left"><div class="settings-icon">📏</div>'
+    +'<div><div class="settings-name">거리 단위</div>'
+    +'<div class="settings-sub">'+(distUnit==='yd'?'야드 (yd)':'미터 (m)')+'</div></div></div>'
+    +'<div style="display:flex;gap:6px;">'
+    +'<button class="badge '+(distUnit==='yd'?'badge-gold':'badge-outline')+'" style="cursor:pointer;border:none;font-size:12px;padding:4px 10px;" onclick="setDistUnit(\'yd\')">yd</button>'
+    +'<button class="badge '+(distUnit==='m'?'badge-gold':'badge-outline')+'" style="cursor:pointer;border:none;font-size:12px;padding:4px 10px;" onclick="setDistUnit(\'m\')">m</button>'
+    +'</div>'
+    +'</div>'
+    +'</div>';
+
+  /* ── 데이터 관리 ── */
+  html += '<div class="section-title" style="margin-top:4px;">데이터 관리</div>';
+  html += '<button class="btn-gold" style="margin-bottom:10px;" onclick="exportData()">📤 데이터 내보내기</button>';
+  html += '<button class="btn-outline" style="margin-bottom:24px;" onclick="importData()">📥 데이터 가져오기</button>';
+
+  html += '<div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--gray2);letter-spacing:1px;">'
+    +'총 '+rounds.length+'개 라운드 · 골프일기 v1.0<br>작은앱공방 · 강종훈</div>';
+
+  document.getElementById('settings-scroll').innerHTML = html;
+}
+
+/* ============================================================
+   동반자 관리
+   ============================================================ */
+function openAddCompanion()  { document.getElementById('overlay-add-companion').classList.remove('hidden'); document.getElementById('new-companion-name').value=''; document.getElementById('new-companion-hdcp').value=''; }
+function closeAddCompanion() { document.getElementById('overlay-add-companion').classList.add('hidden'); }
+
+function saveNewCompanion() {
+  var name = document.getElementById('new-companion-name').value.trim();
+  if (!name) { showToast('이름을 입력해주세요'); return; }
+  var hdcp = document.getElementById('new-companion-hdcp').value;
+  var list = companions.slice();
+  list.push({ name:name, hdcp:hdcp||'' });
+  saveCompanionsData(list);
+  closeAddCompanion();
+  renderSettings();
+  showToast(name+' 추가됨');
+}
+
+function deleteCompanion(idx) {
+  var c = companions[idx];
+  if (!c) return;
+  if (confirm(c.name+'을(를) 목록에서 삭제할까요?')) {
+    var list = companions.filter(function(_,i){ return i!==idx; });
+    saveCompanionsData(list);
+    renderSettings();
+  }
+}
+
+/* ============================================================
+   다크모드 토글
+   ============================================================ */
+function toggleDarkMode() {
+  var isLight = document.body.classList.toggle('light-mode');
+  var s = Object.assign({}, settings, { darkMode: !isLight });
+  saveSettingsData(s);
+  renderSettings();
+  showToast(isLight ? '☀️ 라이트모드로 변경됨' : '🌙 다크모드로 변경됨');
+}
+
+/* ============================================================
+   거리 단위 전환
+   ============================================================ */
+function setDistUnit(unit) {
+  var s = Object.assign({}, settings, { distUnit: unit });
+  saveSettingsData(s);
+  renderSettings();
+  showToast(unit === 'yd' ? '📏 야드(yd)로 변경됨' : '📏 미터(m)로 변경됨');
+}
+
+/* ============================================================
+   골프장 직접 입력 / 코스 관리 편집기
+   ============================================================ */
+var ceClub      = null;   // 편집 중인 클럽 객체 (null = 신규)
+var ceIsNew     = false;  // 신규 여부
+var ceCourseIdx = -1;     // 현재 편집 중인 코스 인덱스 (-1 = 없음)
+
+function openClubEditor(club) {
+  ceIsNew = !club;
+  ceClub  = club ? JSON.parse(JSON.stringify(club)) : {
+    id: 'user_' + Date.now(),
+    name: '', region: '', country: 'KR',
+    courses: []
+  };
+  ceCourseIdx = -1;
+
+  var backBtn = document.getElementById('club-edit-back-btn');
+  if (backBtn) backBtn.onclick = function() {
+    showScreen(club ? 'course' : 'search');
+  };
+
+  document.getElementById('club-edit-title').textContent = ceIsNew ? '새 골프장 입력' : ceClub.name;
+  showScreen('club-edit');
+  renderClubEditor();
+}
+
+function renderClubEditor() {
+  var el = document.getElementById('club-edit-scroll');
+  var html = '';
+
+  /* ── 골프장 기본정보 ── */
+  html += '<div class="section-title" style="margin-top:4px;">골프장 정보</div>';
+  html += '<div class="input-group"><div class="input-label">골프장명</div>'
+    +'<input class="input-field" id="ce-name" type="text" placeholder="예: 남촌 컨트리클럽" value="'+esc(ceClub.name||'')+'" oninput="ceClub.name=this.value"/></div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">'
+    +'<div class="input-group"><div class="input-label">지역</div>'
+      +'<input class="input-field" id="ce-region" type="text" placeholder="예: 경기도 용인" value="'+esc(ceClub.region||'')+'" oninput="ceClub.region=this.value"/></div>'
+    +'<div class="input-group"><div class="input-label">국가</div>'
+      +'<select class="input-field" id="ce-country" onchange="ceClub.country=this.value">'
+        +'<option value="KR"'+(ceClub.country==='KR'?' selected':'')+'>🇰🇷 한국</option>'
+        +'<option value="PH"'+(ceClub.country==='PH'?' selected':'')+'>🇵🇭 필리핀</option>'
+        +'<option value="JP"'+(ceClub.country==='JP'?' selected':'')+'>🇯🇵 일본</option>'
+        +'<option value="US"'+(ceClub.country==='US'?' selected':'')+'>🇺🇸 미국</option>'
+        +'<option value="OTHER"'+((!['KR','PH','JP','US'].includes(ceClub.country))?' selected':'')+'>기타</option>'
+      +'</select></div>'
+    +'</div>';
+
+  /* ── 등록된 코스 목록 ── */
+  html += '<div class="section-title">코스 목록</div>';
+  if (ceClub.courses && ceClub.courses.length) {
+    ceClub.courses.forEach(function(c, i) {
+      var totalPar  = c.holes ? c.holes.reduce(function(s,h){return s+(h.par||0);},0) : 0;
+      var totalYard = c.holes ? c.holes.reduce(function(s,h){return s+(h.yard||0);},0) : 0;
+      var filledHoles = c.holes ? c.holes.filter(function(h){return h.par;}).length : 0;
+      var status = filledHoles >= 18 ? '<span style="color:var(--green);font-size:10px;">✓ '+filledHoles+'홀</span>'
+                 : filledHoles > 0   ? '<span style="color:#f5c842;font-size:10px;">'+filledHoles+'/18홀</span>'
+                 : '<span style="color:var(--gray2);font-size:10px;">미입력</span>';
+      html += '<div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;">'
+        +'<div>'
+          +'<div style="font-size:14px;color:var(--white);font-weight:500;">'+esc(c.name||'(이름없음)')+'</div>'
+          +'<div style="font-size:11px;color:var(--gray);margin-top:2px;">'
+            +(totalPar?'Par '+totalPar:'')+(totalYard?' · '+totalYard+'yd':'')
+            +' '+status
+          +'</div>'
+        +'</div>'
+        +'<div style="display:flex;gap:6px;">'
+          +'<button onclick="ceCourseOpen('+i+')" style="background:rgba(82,204,120,0.12);color:var(--gold);border:1px solid rgba(82,204,120,0.25);border-radius:6px;padding:5px 10px;font-size:12px;">✏️ 수정</button>'
+          +'<button onclick="ceCourseDelete('+i+')" style="background:rgba(224,85,85,0.1);color:#e07070;border:1px solid rgba(224,85,85,0.25);border-radius:6px;padding:5px 8px;font-size:12px;">✕</button>'
+        +'</div>'
+      +'</div>';
+    });
+  } else {
+    html += '<div style="color:var(--gray2);font-size:13px;padding:8px 4px 4px;">아직 코스가 없습니다.</div>';
+  }
+
+  /* ── 새 코스 추가 버튼 ── */
+  html += '<button onclick="ceCourseNew()" style="width:100%;padding:12px;border:1.5px dashed var(--gray2);border-radius:10px;background:transparent;color:var(--gray);font-size:13px;margin-bottom:20px;cursor:pointer;">+ 코스 추가</button>';
+
+  el.innerHTML = html;
+
+  /* 코스 편집 패널 (ceCourseIdx >= 0 이면 펼쳐진 상태로) */
+  if (ceCourseIdx >= 0) {
+    ceCourseRender();
+  }
+}
+
+/* ─── 코스 편집 패널 열기 ─── */
+function ceCourseNew() {
+  ceClub.courses.push({ name: '', par: 72, holes: ceBlankHoles() });
+  ceCourseIdx = ceClub.courses.length - 1;
+  renderClubEditor();
+}
+function ceCourseOpen(i) {
+  ceCourseIdx = i;
+  renderClubEditor();
+}
+function ceCourseDelete(i) {
+  var c = ceClub.courses[i];
+  if (!confirm((c.name||'이 코스')+'를 삭제할까요?')) return;
+  ceClub.courses.splice(i, 1);
+  ceCourseIdx = -1;
+  renderClubEditor();
+}
+function ceBlankHoles() {
+  var holes = [];
+  for (var i = 1; i <= 18; i++) holes.push({ no: i, par: 4, yard: 0, hc: 0 });
+  return holes;
+}
+
+/* ─── 코스 편집 패널 렌더링 ─── */
+function ceCourseRender() {
+  var el = document.getElementById('club-edit-scroll');
+  var c  = ceClub.courses[ceCourseIdx];
+  if (!c) return;
+  if (!c.holes || c.holes.length < 18) c.holes = ceBlankHoles();
+
+  /* 패널 div 동적 생성/교체 */
+  var old = document.getElementById('ce-course-panel');
+  if (old) old.remove();
+
+  var panel = document.createElement('div');
+  panel.id = 'ce-course-panel';
+  panel.style.cssText = 'position:fixed;inset:0;z-index:9200;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
+
+  /* ── 헤더 ── */
+  var headerHtml =
+    '<div style="background:var(--dark);flex-shrink:0;padding:0 16px;height:var(--topbar-h);display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">'
+      +'<button onclick="ceCourseClose()" style="background:none;border:none;color:var(--gray);font-size:22px;padding:8px;">‹</button>'
+      +'<div style="font-size:15px;color:var(--white);font-weight:500;">코스 편집</div>'
+      +'<button onclick="ceCourseSave()" style="background:none;border:none;color:var(--gold);font-size:13px;font-weight:600;padding:8px;">완료</button>'
+    +'</div>';
+
+  /* ── 코스명 ── */
+  var courseNameHtml =
+    '<div style="flex-shrink:0;padding:12px 16px 0;">'
+      +'<div class="input-label" style="margin-bottom:6px;">코스명</div>'
+      +'<input class="input-field" id="ce-course-name" type="text" placeholder="예: Lake/Valley" value="'+esc(c.name||'')+'" style="margin-bottom:0;"/>'
+    +'</div>';
+
+  /* ── 홀 테이블 ── */
+  function holeTableHtml(startIdx, endIdx, label) {
+    var parSum = 0; var yardSum = 0;
+    for (var i = startIdx; i < endIdx; i++) {
+      parSum  += (c.holes[i] && c.holes[i].par  ? parseInt(c.holes[i].par)  : 0);
+      yardSum += (c.holes[i] && c.holes[i].yard ? parseInt(c.holes[i].yard) : 0);
+    }
+    var t = '<div style="font-size:10px;color:var(--gold);letter-spacing:1px;margin:14px 0 6px;">▶ '+label+'</div>';
+    t += '<div style="overflow-x:auto;">';
+    t += '<table class="sc-edit-table">';
+    t += '<thead><tr><th style="width:24px;">홀</th><th>Par</th><th>Yard</th><th>H/C</th></tr></thead>';
+    t += '<tbody>';
+    for (var i = startIdx; i < endIdx; i++) {
+      var h = c.holes[i] || {no:i+1,par:4,yard:0,hc:0};
+      t += '<tr>'
+        +'<td class="hole-num">'+h.no+'</td>'
+        +'<td><input class="sc-cell" type="number" inputmode="numeric" id="ce-par-'+i+'" value="'+(h.par||4)+'" min="3" max="6" onchange="ceHoleUpdate('+i+')"/></td>'
+        +'<td><input class="sc-cell" type="number" inputmode="numeric" id="ce-yard-'+i+'" value="'+(h.yard||'')+'" placeholder="—" min="0" onchange="ceHoleUpdate('+i+')"/></td>'
+        +'<td><input class="sc-cell" type="number" inputmode="numeric" id="ce-hc-'+i+'" value="'+(h.hc||'')+'" placeholder="—" min="1" max="18" onchange="ceHoleUpdate('+i+')"/></td>'
+        +'</tr>';
+    }
+    t += '<tr class="sc-total-row">'
+      +'<td colspan="1" class="sc-total-lbl" id="ce-lbl-'+(startIdx===0?'out':'in')+'">'+label.split(' ')[0]+'</td>'
+      +'<td id="ce-par-sum-'+(startIdx===0?'out':'in')+'">'+parSum+'</td>'
+      +'<td id="ce-yard-sum-'+(startIdx===0?'out':'in')+'">'+(yardSum||'—')+'</td>'
+      +'<td></td>'
+    +'</tr>';
+    t += '</tbody></table></div>';
+    return t;
+  }
+
+  var bodyHtml =
+    '<div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 24px;">'
+      + holeTableHtml(0, 9,  'OUT (1~9홀)')
+      + holeTableHtml(9, 18, 'IN (10~18홀)')
+    +'</div>';
+
+  panel.innerHTML = headerHtml + courseNameHtml + bodyHtml;
+  document.body.appendChild(panel);
+}
+
+function ceHoleUpdate(i) {
+  var c = ceClub.courses[ceCourseIdx];
+  if (!c || !c.holes) return;
+  var parEl  = document.getElementById('ce-par-'+i);
+  var yardEl = document.getElementById('ce-yard-'+i);
+  var hcEl   = document.getElementById('ce-hc-'+i);
+  if (parEl)  c.holes[i].par  = parseInt(parEl.value)||4;
+  if (yardEl) c.holes[i].yard = parseInt(yardEl.value)||0;
+  if (hcEl)   c.holes[i].hc   = parseInt(hcEl.value)||0;
+
+  /* 합계 실시간 업데이트 */
+  var parOut=0, yardOut=0, parIn=0, yardIn=0;
+  for (var j=0;j<9;j++){  parOut+=c.holes[j].par||0; yardOut+=c.holes[j].yard||0; }
+  for (var j=9;j<18;j++){ parIn +=c.holes[j].par||0; yardIn +=c.holes[j].yard||0; }
+  var pso=document.getElementById('ce-par-sum-out');  if(pso) pso.textContent=parOut;
+  var yso=document.getElementById('ce-yard-sum-out'); if(yso) yso.textContent=yardOut||'—';
+  var psi=document.getElementById('ce-par-sum-in');   if(psi) psi.textContent=parIn;
+  var ysi=document.getElementById('ce-yard-sum-in');  if(ysi) ysi.textContent=yardIn||'—';
+}
+
+function ceCourseSave() {
+  var c = ceClub.courses[ceCourseIdx];
+  if (!c) return;
+  var nameEl = document.getElementById('ce-course-name');
+  if (nameEl) c.name = nameEl.value.trim();
+  if (!c.name) { showToast('코스명을 입력해주세요'); return; }
+  /* par 자동계산 */
+  c.par = c.holes.reduce(function(s,h){return s+(parseInt(h.par)||0);},0);
+  ceCourseClose();
+}
+
+function ceCourseClose() {
+  var panel = document.getElementById('ce-course-panel');
+  if (panel) panel.remove();
+  ceCourseIdx = -1;
+  renderClubEditor();
+}
+
+/* ─── 골프장 전체 저장 ─── */
+function saveClubEditor() {
+  /* 기본정보 최신화 */
+  var nameEl   = document.getElementById('ce-name');
+  var regionEl = document.getElementById('ce-region');
+  if (nameEl)   ceClub.name   = nameEl.value.trim();
+  if (regionEl) ceClub.region = regionEl.value.trim();
+
+  if (!ceClub.name) { showToast('골프장명을 입력해주세요'); return; }
+  if (!ceClub.courses || !ceClub.courses.length) { showToast('코스를 하나 이상 추가해주세요'); return; }
+
+  var clubs = savedClubs.slice();
+  if (ceIsNew) {
+    clubs.push(ceClub);
+    showToast('✅ '+ceClub.name+' 등록 완료!');
+  } else {
+    var idx = clubs.findIndex(function(c){ return c.id === ceClub.id || c.name === ceClub.name; });
+    if (idx >= 0) clubs[idx] = ceClub;
+    else clubs.push(ceClub);
+    showToast('✅ '+ceClub.name+' 수정 완료!');
+  }
+  saveClubsData(clubs);
+  curClub = ceClub;
+  showScreen('course');
+  renderCourseScreen();
+}
+
+/* ============================================================
+   골프장 파일 가져오기 (JSON)
+   ============================================================ */
+function importClubFile() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var raw = ev.target.result.trim();
+      var clean = raw.replace(/```json|```/g,'').trim();
+      var data;
+      try { data = JSON.parse(clean); } catch(err) {
+        showToast('❌ JSON 형식 오류'); return;
+      }
+      var club = {
+        id: 'paste_'+Date.now(),
+        name: data.clubName || data.name || '이름없음',
+        region: data.region || data.city || '',
+        country: data.country || '',
+        courses: []
+      };
+      var rawCourses = data.courses || [];
+      if (!rawCourses.length) { showToast('❌ courses 배열 없음'); return; }
+      rawCourses.forEach(function(c) {
+        var holes = (c.holes||[]).map(function(h, i) {
+          return { no: h.hole||h.no||(i+1), par: h.par||4, yard: h.yards||h.yard||0, hc: h.si||h.hc||0 };
+        });
+        club.courses.push({ name: c.courseName||c.name||'코스', par: c.par||holes.reduce(function(s,h){return s+h.par;},0), holes: holes });
+      });
+      var exists = savedClubs.findIndex(function(c){ return c.name===club.name; });
+      var clubs = savedClubs.slice();
+      if (exists >= 0) { clubs[exists] = club; showToast(club.name+' 업데이트 완료!'); }
+      else { clubs.push(club); showToast(club.name+' 등록 완료!'); }
+      saveClubsData(clubs);
+      renderMyClubsList();
+      curClub = club;
+      showScreen('course');
+      renderCourseScreen();
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+function exportData() {
+  var data = {
+    version: '1.0',
+    appName: '골프일기',
+    exportedAt: new Date().toLocaleString('ko-KR'),
+    rounds: rounds,
+    companions: companions,
+    clubs: savedClubs,
+    player: player
+  };
+  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  var url  = URL.createObjectURL(blob);
+  var a    = document.createElement('a');
+  a.href   = url;
+  a.download = '골프일기_백업_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  // 백업 시각 저장
+  var s = Object.assign({}, settings, { lastBackup: new Date().toLocaleString('ko-KR') });
+  saveSettingsData(s);
+  renderSettings();
+  showToast('✅ 백업 파일이 저장되었습니다');
+}
+
+function importData() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      try {
+        var imported = JSON.parse(ev.target.result);
+        var importedRounds = imported.rounds || [];
+        var existIds = new Set(rounds.map(function(r){ return r.id; }));
+        var merged = rounds.concat(importedRounds.filter(function(r){ return !existIds.has(r.id); }));
+        saveRoundsData(merged);
+        if (imported.companions) saveCompanionsData(imported.companions);
+        if (imported.clubs)      saveClubsData(imported.clubs);
+        renderSettings();
+        showToast('✅ ' + importedRounds.length + '개 라운드 불러옴');
+      } catch(er) {
+        showToast('❌ 파일 형식 오류');
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+/* ============================================================
+   기록 검색
+   ============================================================ */
+function searchRecords() {
+  var q = document.getElementById('record-search-input').value.trim().toLowerCase();
+  var el = document.getElementById('record-search-results');
+  if (!q) { el.innerHTML = ''; return; }
+  var results = rounds.filter(function(r){
+    return (r.clubName||'').toLowerCase().indexOf(q)>=0
+      || (r.courseName||'').toLowerCase().indexOf(q)>=0
+      || (r.companions||[]).join(' ').toLowerCase().indexOf(q)>=0
+      || (r.memo||'').toLowerCase().indexOf(q)>=0
+      || (r.date||'').indexOf(q)>=0;
+  });
+  if (!results.length) { el.innerHTML = '<div style="color:var(--gray2);font-size:13px;padding:12px 0;">검색 결과가 없습니다</div>'; return; }
+  var html = '';
+  results.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  results.forEach(function(r){
+    var par=r.coursePar||72; var diff=r.totalScore-par;
+    html += '<div class="round-card">'
+      +'<div class="round-top">'
+      +'<div><div class="round-course">'+esc(r.clubName)+'</div><div class="round-info">'+esc(r.courseName)+'</div></div>'
+      +'<div style="text-align:right;"><div class="round-score">'+r.totalScore+'</div>'
+      +'<span class="badge '+(diff>0?'badge-red':'badge-green')+'">'+(diff>0?'+':'')+diff+'</span></div>'
+      +'</div>'
+      +'<div class="round-meta"><div class="round-tag">📅 '+fmtDateShort(r.date)+'</div>'
+      +(r.companions&&r.companions.length?'<div class="round-tag">👥 '+esc(r.companions.join(', '))+'</div>':'')
+      +'</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+/* ============================================================
+   초기화
+   ============================================================ */
+(function init() {
+  // Apple touch icon
+  var al = document.createElement('link');
+  al.rel = 'apple-touch-icon';
+  al.href = '/golfapp/icons/icon-192x192.png';
+  document.head.appendChild(al);
+
+  // 데이터 로드
+  rounds     = loadRounds();
+  player     = loadPlayer();
+  settings   = loadSettings();
+  savedClubs = loadClubs();
+  companions = loadCompanions();
+
+  // 기본 골프장 데이터 (최초 실행 시 자동 주입)
+  var DEFAULT_CLUBS = [
+    {
+      id: 'default_castlepine',
+      name: '캐슬파인 골프클럽',
+      region: '경기도 여주시',
+      country: 'KR',
+      courses: [
+        {
+          name: 'Lake/Valley',
+          par: 72,
+          holes: [
+            {no:1,  par:4, yard:396, hc:6},
+            {no:2,  par:4, yard:405, hc:10},
+            {no:3,  par:4, yard:340, hc:16},
+            {no:4,  par:5, yard:537, hc:4},
+            {no:5,  par:3, yard:162, hc:18},
+            {no:6,  par:4, yard:385, hc:12},
+            {no:7,  par:4, yard:400, hc:8},
+            {no:8,  par:3, yard:165, hc:14},
+            {no:9,  par:5, yard:527, hc:2},
+            {no:10, par:4, yard:410, hc:5},
+            {no:11, par:4, yard:392, hc:9},
+            {no:12, par:4, yard:410, hc:11},
+            {no:13, par:3, yard:186, hc:15},
+            {no:14, par:5, yard:546, hc:7},
+            {no:15, par:5, yard:603, hc:1},
+            {no:16, par:4, yard:326, hc:13},
+            {no:17, par:3, yard:190, hc:3},
+            {no:18, par:4, yard:322, hc:17}
+          ]
+        }
+      ]
+    },
+    {
+      id: 'default_360cc',
+      name: '360 컨트리클럽',
+      region: '경기도 여주시',
+      country: 'KR',
+      courses: [
+        {
+          name: '정규코스',
+          par: 72,
+          holes: [
+            {no:1,  par:4, yard:448, hc:9},
+            {no:2,  par:4, yard:424, hc:7},
+            {no:3,  par:5, yard:560, hc:1},
+            {no:4,  par:3, yard:156, hc:17},
+            {no:5,  par:4, yard:416, hc:3},
+            {no:6,  par:4, yard:376, hc:13},
+            {no:7,  par:3, yard:160, hc:15},
+            {no:8,  par:5, yard:518, hc:5},
+            {no:9,  par:4, yard:377, hc:11},
+            {no:10, par:4, yard:429, hc:4},
+            {no:11, par:3, yard:238, hc:6},
+            {no:12, par:5, yard:561, hc:2},
+            {no:13, par:4, yard:410, hc:18},
+            {no:14, par:4, yard:430, hc:10},
+            {no:15, par:3, yard:232, hc:8},
+            {no:16, par:5, yard:530, hc:12},
+            {no:17, par:4, yard:336, hc:14},
+            {no:18, par:4, yard:435, hc:16}
+          ]
+        }
+      ]
+    },
+    {
+      id: 'default_orchard',
+      name: 'Orchard Golf & Country Club',
+      region: 'Dasmariñas, Cavite',
+      country: 'PH',
+      courses: [
+        {
+          name: 'Palmer',
+          par: 72,
+          holes: [
+            {no:1,  par:4, yard:440, hc:11},
+            {no:2,  par:5, yard:521, hc:9},
+            {no:3,  par:4, yard:455, hc:13},
+            {no:4,  par:4, yard:487, hc:5},
+            {no:5,  par:3, yard:191, hc:17},
+            {no:6,  par:5, yard:506, hc:1},
+            {no:7,  par:3, yard:199, hc:15},
+            {no:8,  par:4, yard:404, hc:3},
+            {no:9,  par:4, yard:413, hc:7},
+            {no:10, par:4, yard:403, hc:2},
+            {no:11, par:4, yard:345, hc:14},
+            {no:12, par:3, yard:152, hc:18},
+            {no:13, par:4, yard:385, hc:12},
+            {no:14, par:5, yard:535, hc:8},
+            {no:15, par:4, yard:427, hc:4},
+            {no:16, par:3, yard:206, hc:16},
+            {no:17, par:4, yard:405, hc:10},
+            {no:18, par:5, yard:574, hc:6}
+          ]
+        },
+        {
+          name: 'Player',
+          par: 72,
+          holes: [
+            {no:1,  par:4, yard:359, hc:9},
+            {no:2,  par:4, yard:381, hc:3},
+            {no:3,  par:3, yard:196, hc:17},
+            {no:4,  par:5, yard:513, hc:1},
+            {no:5,  par:3, yard:208, hc:15},
+            {no:6,  par:4, yard:396, hc:7},
+            {no:7,  par:4, yard:367, hc:13},
+            {no:8,  par:4, yard:372, hc:11},
+            {no:9,  par:5, yard:578, hc:5},
+            {no:10, par:4, yard:426, hc:10},
+            {no:11, par:3, yard:163, hc:16},
+            {no:12, par:5, yard:610, hc:2},
+            {no:13, par:4, yard:357, hc:4},
+            {no:14, par:3, yard:179, hc:18},
+            {no:15, par:4, yard:465, hc:8},
+            {no:16, par:4, yard:381, hc:14},
+            {no:17, par:4, yard:449, hc:12},
+            {no:18, par:5, yard:503, hc:6}
+          ]
+        }
+      ]
+    },
+    {
+      id: 'default_riviera',
+      name: '리베라 컨트리클럽',
+      region: '화성시 동탄',
+      country: 'KR',
+      courses: [
+        {
+          name: 'Lake/Valley',
+          par: 72,
+          holes: [
+            {no:1,  par:4, yard:405, hc:10},
+            {no:2,  par:3, yard:186, hc:16},
+            {no:3,  par:4, yard:344, hc:14},
+            {no:4,  par:5, yard:583, hc:2},
+            {no:5,  par:4, yard:411, hc:8},
+            {no:6,  par:4, yard:413, hc:4},
+            {no:7,  par:3, yard:199, hc:18},
+            {no:8,  par:5, yard:548, hc:6},
+            {no:9,  par:4, yard:325, hc:12},
+            {no:10, par:4, yard:378, hc:9},
+            {no:11, par:4, yard:406, hc:3},
+            {no:12, par:3, yard:165, hc:15},
+            {no:13, par:5, yard:545, hc:7},
+            {no:14, par:4, yard:385, hc:5},
+            {no:15, par:4, yard:358, hc:13},
+            {no:16, par:3, yard:168, hc:17},
+            {no:17, par:5, yard:488, hc:1},
+            {no:18, par:4, yard:354, hc:11}
+          ]
+        },
+        {
+          name: 'PineHill/CherryHill',
+          par: 72,
+          holes: [
+            {no:1,  par:5, yard:593, hc:5},
+            {no:2,  par:4, yard:405, hc:9},
+            {no:3,  par:4, yard:406, hc:15},
+            {no:4,  par:3, yard:214, hc:13},
+            {no:5,  par:4, yard:417, hc:11},
+            {no:6,  par:3, yard:197, hc:17},
+            {no:7,  par:4, yard:420, hc:7},
+            {no:8,  par:4, yard:455, hc:3},
+            {no:9,  par:5, yard:627, hc:1},
+            {no:10, par:4, yard:432, hc:11},
+            {no:11, par:4, yard:422, hc:17},
+            {no:12, par:3, yard:200, hc:15},
+            {no:13, par:5, yard:634, hc:3},
+            {no:14, par:4, yard:364, hc:9},
+            {no:15, par:4, yard:395, hc:5},
+            {no:16, par:4, yard:409, hc:1},
+            {no:17, par:3, yard:210, hc:7},
+            {no:18, par:4, yard:573, hc:13}
+          ]
+        }
+      ]
+    },
+    {
+      id: 'default_pristinevalley',
+      name: '프리스틴밸리 컨트리클럽',
+      region: '가평군',
+      country: 'KR',
+      courses: [
+        {
+          name: '정규코스',
+          par: 72,
+          holes: [
+            {no:1,  par:5, yard:493, hc:15},
+            {no:2,  par:3, yard:146, hc:4},
+            {no:3,  par:4, yard:383, hc:1},
+            {no:4,  par:4, yard:369, hc:7},
+            {no:5,  par:5, yard:504, hc:18},
+            {no:6,  par:4, yard:308, hc:14},
+            {no:7,  par:4, yard:394, hc:11},
+            {no:8,  par:3, yard:184, hc:10},
+            {no:9,  par:4, yard:374, hc:6},
+            {no:10, par:4, yard:386, hc:2},
+            {no:11, par:4, yard:369, hc:8},
+            {no:12, par:3, yard:158, hc:16},
+            {no:13, par:4, yard:381, hc:12},
+            {no:14, par:4, yard:412, hc:4},
+            {no:15, par:5, yard:516, hc:17},
+            {no:16, par:4, yard:365, hc:13},
+            {no:17, par:3, yard:172, hc:3},
+            {no:18, par:4, yard:384, hc:9}
+          ]
+        }
+      ]
+    },
+    {
+      id: 'default_tagaytaymidlands',
+      name: 'Tagaytay Midlands Golf Club',
+      region: 'Tagaytay, Cavite',
+      country: 'PH',
+      courses: [
+        {
+          name: '정규코스',
+          par: 72,
+          holes: [
+            {no:1,  par:4, yard:433, hc:7},
+            {no:2,  par:5, yard:592, hc:3},
+            {no:3,  par:3, yard:161, hc:15},
+            {no:4,  par:4, yard:463, hc:1},
+            {no:5,  par:3, yard:183, hc:17},
+            {no:6,  par:5, yard:539, hc:11},
+            {no:7,  par:4, yard:349, hc:13},
+            {no:8,  par:4, yard:410, hc:9},
+            {no:9,  par:4, yard:411, hc:5},
+            {no:10, par:4, yard:428, hc:8},
+            {no:11, par:4, yard:423, hc:10},
+            {no:12, par:3, yard:137, hc:16},
+            {no:13, par:4, yard:426, hc:4},
+            {no:14, par:4, yard:439, hc:6},
+            {no:15, par:4, yard:460, hc:2},
+            {no:16, par:5, yard:492, hc:12},
+            {no:17, par:3, yard:167, hc:18},
+            {no:18, par:5, yard:514, hc:14}
+          ]
+        }
+      ]
+    },
+    {
+      id: 'default_tagaytayhighlands',
+      name: 'Tagaytay Highlands International Golf Club',
+      region: 'Tagaytay, Cavite',
+      country: 'PH',
+      courses: [
+        {
+          name: '정규코스',
+          par: 70,
+          holes: [
+            {no:1,  par:4, yard:341, hc:14},
+            {no:2,  par:3, yard:197, hc:8},
+            {no:3,  par:4, yard:357, hc:10},
+            {no:4,  par:5, yard:533, hc:2},
+            {no:5,  par:4, yard:340, hc:12},
+            {no:6,  par:3, yard:118, hc:18},
+            {no:7,  par:4, yard:396, hc:4},
+            {no:8,  par:4, yard:366, hc:6},
+            {no:9,  par:3, yard:129, hc:16},
+            {no:10, par:4, yard:368, hc:13},
+            {no:11, par:4, yard:348, hc:11},
+            {no:12, par:3, yard:190, hc:15},
+            {no:13, par:4, yard:439, hc:9},
+            {no:14, par:5, yard:490, hc:1},
+            {no:15, par:5, yard:541, hc:5},
+            {no:16, par:4, yard:394, hc:3},
+            {no:17, par:3, yard:161, hc:17},
+            {no:18, par:4, yard:411, hc:7}
+          ]
+        }
+      ]
+    }
+  ,
+  /* ── 한국 추가 ─────────────────────────────────── */
+  {
+    id: 'default_88cc',
+    name: '88 컨트리클럽',
+    region: '경기도 용인시',
+    country: 'KR',
+    courses: [
+      {
+        name: 'East/West',
+        par: 72,
+        holes: [
+          {no:1,  par:4, yard:423, hc:5},
+          {no:2,  par:4, yard:419, hc:3},
+          {no:3,  par:3, yard:194, hc:9},
+          {no:4,  par:5, yard:586, hc:13},
+          {no:5,  par:4, yard:361, hc:7},
+          {no:6,  par:4, yard:339, hc:15},
+          {no:7,  par:3, yard:171, hc:11},
+          {no:8,  par:5, yard:486, hc:17},
+          {no:9,  par:4, yard:389, hc:1},
+          {no:10, par:5, yard:556, hc:18},
+          {no:11, par:4, yard:434, hc:6},
+          {no:12, par:4, yard:366, hc:12},
+          {no:13, par:3, yard:175, hc:10},
+          {no:14, par:4, yard:424, hc:8},
+          {no:15, par:3, yard:231, hc:4},
+          {no:16, par:4, yard:400, hc:2},
+          {no:17, par:4, yard:352, hc:16},
+          {no:18, par:5, yard:524, hc:14}
+        ]
+      }
+    ]
+  },
+  {
+    id: 'default_konjiam',
+    name: '곤지암 컨트리클럽',
+    region: '경기도 광주시',
+    country: 'KR',
+    courses: [
+      {
+        name: 'Mountain/Lake',
+        par: 72,
+        holes: [
+          {no:1,  par:5, yard:490, hc:18},
+          {no:2,  par:4, yard:430, hc:2},
+          {no:3,  par:4, yard:399, hc:6},
+          {no:4,  par:4, yard:340, hc:16},
+          {no:5,  par:4, yard:388, hc:4},
+          {no:6,  par:3, yard:185, hc:14},
+          {no:7,  par:4, yard:427, hc:8},
+          {no:8,  par:3, yard:202, hc:10},
+          {no:9,  par:5, yard:554, hc:12},
+          {no:10, par:5, yard:579, hc:17},
+          {no:11, par:4, yard:463, hc:3},
+          {no:12, par:3, yard:180, hc:11},
+          {no:13, par:4, yard:476, hc:1},
+          {no:14, par:4, yard:380, hc:9},
+          {no:15, par:3, yard:190, hc:13},
+          {no:16, par:4, yard:410, hc:7},
+          {no:17, par:5, yard:569, hc:15},
+          {no:18, par:4, yard:450, hc:5}
+        ]
+      }
+    ]
+  },
+  {
+    id: 'default_cheongpyeong',
+    name: '청평 미다스 골프클럽',
+    region: '경기도 가평군',
+    country: 'KR',
+    courses: [
+      {
+        name: 'Valley/Midas',
+        par: 72,
+        holes: [
+          {no:1,  par:4, yard:396, hc:15},
+          {no:2,  par:3, yard:230, hc:7},
+          {no:3,  par:4, yard:399, hc:1},
+          {no:4,  par:4, yard:394, hc:17},
+          {no:5,  par:5, yard:540, hc:13},
+          {no:6,  par:4, yard:388, hc:3},
+          {no:7,  par:3, yard:196, hc:11},
+          {no:8,  par:5, yard:561, hc:5},
+          {no:9,  par:4, yard:423, hc:9},
+          {no:10, par:4, yard:421, hc:8},
+          {no:11, par:5, yard:557, hc:6},
+          {no:12, par:3, yard:190, hc:10},
+          {no:13, par:4, yard:396, hc:4},
+          {no:14, par:5, yard:541, hc:14},
+          {no:15, par:4, yard:428, hc:12},
+          {no:16, par:3, yard:189, hc:16},
+          {no:17, par:4, yard:353, hc:18},
+          {no:18, par:4, yard:450, hc:2}
+        ]
+      }
+    ]
+  },
+  {
+    id: 'default_lavieestbelle',
+    name: 'La Vie est Belle CC',
+    region: '강원도 춘천시',
+    country: 'KR',
+    courses: [
+      {
+        name: 'Old Course',
+        par: 72,
+        holes: [
+          {no:1,  par:4, yard:393, hc:17},
+          {no:2,  par:5, yard:492, hc:3},
+          {no:3,  par:4, yard:396, hc:7},
+          {no:4,  par:3, yard:209, hc:9},
+          {no:5,  par:4, yard:378, hc:5},
+          {no:6,  par:5, yard:544, hc:1},
+          {no:7,  par:4, yard:329, hc:11},
+          {no:8,  par:3, yard:193, hc:13},
+          {no:9,  par:4, yard:425, hc:15},
+          {no:10, par:4, yard:401, hc:14},
+          {no:11, par:4, yard:342, hc:8},
+          {no:12, par:4, yard:330, hc:10},
+          {no:13, par:5, yard:533, hc:4},
+          {no:14, par:4, yard:437, hc:2},
+          {no:15, par:3, yard:215, hc:16},
+          {no:16, par:5, yard:550, hc:6},
+          {no:17, par:3, yard:161, hc:18},
+          {no:18, par:4, yard:395, hc:12}
+        ]
+      }
+    ]
+  },
+  /* ── 필리핀 추가 ─────────────────────────────────── */
+  {
+    id: 'default_eagleridge_norman',
+    name: 'Eagle Ridge Golf & Country Club',
+    region: 'Gen. Trias, Cavite',
+    country: 'PH',
+    courses: [
+      {
+        name: 'Norman Course',
+        par: 72,
+        holes: [
+          {no:1,  par:4, yard:410, hc:9},
+          {no:2,  par:4, yard:428, hc:1},
+          {no:3,  par:5, yard:574, hc:7},
+          {no:4,  par:3, yard:195, hc:11},
+          {no:5,  par:5, yard:589, hc:5},
+          {no:6,  par:4, yard:377, hc:13},
+          {no:7,  par:4, yard:327, hc:17},
+          {no:8,  par:3, yard:158, hc:15},
+          {no:9,  par:4, yard:418, hc:3},
+          {no:10, par:4, yard:432, hc:10},
+          {no:11, par:5, yard:539, hc:16},
+          {no:12, par:4, yard:424, hc:12},
+          {no:13, par:4, yard:438, hc:8},
+          {no:14, par:3, yard:176, hc:14},
+          {no:15, par:5, yard:569, hc:4},
+          {no:16, par:4, yard:432, hc:2},
+          {no:17, par:3, yard:189, hc:18},
+          {no:18, par:4, yard:448, hc:6}
+        ]
+      }
+    ]
+  },
+  {
+    id: 'default_sherwood',
+    name: 'Sherwood Hills Golf Club',
+    region: 'Trece Martires, Cavite',
+    country: 'PH',
+    courses: [
+      {
+        name: '정규코스',
+        par: 72,
+        holes: [
+          {no:1,  par:5, yard:520, hc:7},
+          {no:2,  par:3, yard:190, hc:17},
+          {no:3,  par:4, yard:410, hc:11},
+          {no:4,  par:3, yard:195, hc:15},
+          {no:5,  par:4, yard:430, hc:3},
+          {no:6,  par:5, yard:545, hc:9},
+          {no:7,  par:4, yard:420, hc:5},
+          {no:8,  par:4, yard:480, hc:1},
+          {no:9,  par:4, yard:395, hc:13},
+          {no:10, par:5, yard:530, hc:8},
+          {no:11, par:3, yard:185, hc:16},
+          {no:12, par:4, yard:415, hc:12},
+          {no:13, par:3, yard:200, hc:14},
+          {no:14, par:4, yard:440, hc:2},
+          {no:15, par:5, yard:555, hc:10},
+          {no:16, par:4, yard:415, hc:4},
+          {no:17, par:4, yard:465, hc:6},
+          {no:18, par:4, yard:360, hc:18}
+        ]
+      }
+    ]
+  },
+  {
+    id: 'default_malarayat',
+    name: 'Mount Malarayat Golf & Country Club',
+    region: 'Lipa City, Batangas',
+    country: 'PH',
+    courses: [
+      {
+        name: 'Malipunyo/Makulot',
+        par: 72,
+        holes: [
+          {no:1,  par:4, yard:436, hc:11},
+          {no:2,  par:3, yard:199, hc:17},
+          {no:3,  par:4, yard:451, hc:7},
+          {no:4,  par:4, yard:386, hc:13},
+          {no:5,  par:5, yard:616, hc:1},
+          {no:6,  par:3, yard:241, hc:15},
+          {no:7,  par:4, yard:474, hc:9},
+          {no:8,  par:5, yard:565, hc:5},
+          {no:9,  par:4, yard:492, hc:3},
+          {no:10, par:4, yard:457, hc:12},
+          {no:11, par:4, yard:405, hc:14},
+          {no:12, par:4, yard:426, hc:10},
+          {no:13, par:3, yard:242, hc:18},
+          {no:14, par:5, yard:580, hc:4},
+          {no:15, par:4, yard:449, hc:8},
+          {no:16, par:5, yard:575, hc:2},
+          {no:17, par:3, yard:202, hc:16},
+          {no:18, par:4, yard:463, hc:6}
+        ]
+      }
+    ]
+  }
+  ];
+
+  // 최초 실행 시 기본 골프장 주입 (버전 관리)
+  var DEFAULT_CLUBS_VERSION = 'v6'; // 데이터 수정 시 올리면 자동 재주입
+  if (savedClubs.length === 0 || localStorage.getItem('golfapp_clubs_ver') !== DEFAULT_CLUBS_VERSION) {
+    // 기본 골프장 ID 유지, 사용자가 추가한 골프장은 보존
+    var userAdded = savedClubs.filter(function(c){ return c.id && c.id.indexOf('default_') !== 0; });
+    saveClubsData(DEFAULT_CLUBS.concat(userAdded));
+    localStorage.setItem('golfapp_clubs_ver', DEFAULT_CLUBS_VERSION);
+  }
+
+  // 다크모드 설정 복원 (기본값: 다크모드)
+  if (settings.darkMode === false) {
+    document.body.classList.add('light-mode');
+  }
+
+  // 서비스워커 등록
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+      navigator.serviceWorker.register('/golfapp/sw.js');
+    });
+  }
+
+  // 히스토리 초기화
+  history.replaceState({ screen: 'splash' }, '');
+})();
+</script>
+</body>
+</html>
