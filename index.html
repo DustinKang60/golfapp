@@ -407,7 +407,14 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .step-val { font-size: 24px; font-weight: 700; color: var(--white); min-width: 30px; text-align: center; }
 .score-rel { font-size: 11px; padding: 2px 7px; border-radius: 8px; margin-top: 2px; text-align: center; }
 .rel-eagle  { background: rgba(85,136,204,0.2);  color: var(--blue);  border: 1px solid rgba(85,136,204,0.3); }
-.rel-birdie { background: rgba(76,175,114,0.2);  color: var(--green); border: 1px solid rgba(76,175,114,0.3); }
+.rel-birdie {
+  background: rgba(74,222,128,0.22);
+  color: var(--green);
+  border: 1px solid rgba(74,222,128,0.55);
+  font-weight: 600;
+  box-shadow: 0 0 8px rgba(74,222,128,0.35);
+  letter-spacing: 0.3px;
+}
 .rel-par    { background: rgba(136,136,128,0.15); color: var(--gray);  border: 1px solid rgba(136,136,128,0.2); }
 .rel-bogey  { background: rgba(224,85,85,0.15);  color: var(--red);   border: 1px solid rgba(224,85,85,0.25); }
 .rel-double { background: rgba(224,85,85,0.25);  color: #ff8888;      border: 1px solid rgba(224,85,85,0.4); }
@@ -440,8 +447,17 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
 .hole-mini .hm-sc  { font-size: 14px; font-weight: 700; line-height: 1; }
 .hole-mini.eagle  { background: rgba(85,136,204,0.2);  border-color: rgba(85,136,204,0.5); }
 .hole-mini.eagle  .hm-sc { color: var(--blue); }
-.hole-mini.birdie { background: rgba(76,175,114,0.2);  border-color: rgba(76,175,114,0.5); }
-.hole-mini.birdie .hm-sc { color: var(--green); }
+.hole-mini.birdie {
+  background: rgba(74,222,128,0.22);
+  border-color: rgba(74,222,128,0.6);
+  box-shadow: 0 0 7px rgba(74,222,128,0.4);
+  animation: birdie-pulse 2s ease-in-out infinite;
+}
+.hole-mini.birdie .hm-sc { color: var(--green); font-weight: 700; }
+@keyframes birdie-pulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(74,222,128,0.3); }
+  50%       { box-shadow: 0 0 12px rgba(74,222,128,0.6); }
+}
 .hole-mini.bogey  { background: rgba(224,85,85,0.12);  border-color: rgba(224,85,85,0.3); }
 .hole-mini.bogey  .hm-sc { color: var(--red); }
 .hole-mini.double { background: rgba(224,85,85,0.22);  border-color: rgba(224,85,85,0.5); }
@@ -1045,6 +1061,24 @@ window.addEventListener('popstate', function(e) {
     return;
   }
 
+  // 스코어 입력 중 뒤로가기 — 경고
+  if (curName === 'scoring') {
+    if (!confirm('스코어 입력을 중단하시겠어요?\n입력한 스코어가 모두 사라집니다.')) {
+      history.pushState({ screen: curName }, '');
+      return;
+    }
+  }
+
+  // 완료 화면에서 뒤로가기 — 메모 초기화 경고
+  if (curName === 'complete') {
+    var memoVal   = (document.getElementById('memo-note')   || {}).value || '';
+    var caddieVal = (document.getElementById('memo-caddie') || {}).value || '';
+    if ((memoVal || caddieVal) && !confirm('스코어 수정 화면으로 돌아가면 메모와 캐디 정보가 초기화됩니다.\n계속하시겠어요?')) {
+      history.pushState({ screen: curName }, '');
+      return;
+    }
+  }
+
   showScreen(prevName);
 });
 
@@ -1067,16 +1101,19 @@ function onSplashImport() {
     var file = e.target.files[0];
     if (!file) return;
     var reader = new FileReader();
+    reader.onerror = function() { showToast('❌ 파일을 읽을 수 없습니다'); };
     reader.onload = function(ev) {
       try {
         var imported = JSON.parse(ev.target.result);
-        var importedRounds = imported.rounds || [];
+        if (typeof imported !== 'object' || imported === null) throw new Error('invalid');
+        var importedRounds = Array.isArray(imported.rounds) ? imported.rounds : [];
+        var validRounds = importedRounds.filter(function(r) { return r && r.id && r.date; });
         var existIds = new Set(rounds.map(function(r){ return r.id; }));
-        var merged = rounds.concat(importedRounds.filter(function(r){ return !existIds.has(r.id); }));
+        var merged = rounds.concat(validRounds.filter(function(r){ return !existIds.has(r.id); }));
         saveRoundsData(merged);
-        if (imported.companions) saveCompanionsData(imported.companions);
-        if (imported.clubs) saveClubsData(imported.clubs);
-        showToast('✅ ' + importedRounds.length + '개 라운드 불러옴');
+        if (Array.isArray(imported.companions)) saveCompanionsData(imported.companions);
+        if (Array.isArray(imported.clubs)) saveClubsData(imported.clubs);
+        showToast('✅ ' + validRounds.length + '개 라운드 불러옴');
         showScreen('main');
       } catch(er) {
         showToast('❌ 파일 형식 오류');
@@ -1387,9 +1424,9 @@ function editRoundInfo(id) {
     +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">동반자 (쉼표로 구분)</div>'
     +'<input id="ei-companions" type="text" class="input-field" value="'+(r.companions?esc(r.companions.join(', ')):'')+'" placeholder="홍길동, 이순신" style="margin-bottom:12px;"/>'
     +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">메모</div>'
-    +'<textarea id="ei-memo" class="input-field" rows="2" placeholder="오늘의 라운드 메모..." style="resize:none;margin-bottom:12px;">'+(r.memo||'')+'</textarea>'
+    +'<textarea id="ei-memo" class="input-field" rows="2" placeholder="오늘의 라운드 메모..." style="resize:none;margin-bottom:12px;">'+esc(r.memo||'')+'</textarea>'
     +'<div style="font-size:12px;color:var(--gray);margin-bottom:4px;">캐디 이름</div>'
-    +'<input id="ei-caddie" type="text" class="input-field" value="'+(r.caddie||'')+'" placeholder="캐디 이름" style="margin-bottom:20px;"/>'
+    +'<input id="ei-caddie" type="text" class="input-field" value="'+esc(r.caddie||'')+'" placeholder="캐디 이름" style="margin-bottom:20px;"/>'
     +'<button class="btn-gold" onclick="saveRoundInfo(\''+id+'\')">💾 저장</button>'
     +'</div>';
   document.body.appendChild(modal);
@@ -2629,6 +2666,7 @@ function openClubEditor(club) {
 
   var backBtn = document.getElementById('club-edit-back-btn');
   if (backBtn) backBtn.onclick = function() {
+    if (!confirm('저장하지 않고 나가시겠어요?\n입력 중인 내용은 사라집니다.')) return;
     showScreen(club ? 'course' : 'search');
   };
 
@@ -2797,9 +2835,20 @@ function ceHoleUpdate(i) {
   var parEl  = document.getElementById('ce-par-'+i);
   var yardEl = document.getElementById('ce-yard-'+i);
   var hcEl   = document.getElementById('ce-hc-'+i);
-  if (parEl)  c.holes[i].par  = parseInt(parEl.value)||4;
-  if (yardEl) c.holes[i].yard = parseInt(yardEl.value)||0;
-  if (hcEl)   c.holes[i].hc   = parseInt(hcEl.value)||0;
+  if (parEl)  {
+    var p = parseInt(parEl.value);
+    if (isNaN(p) || p < 3 || p > 6) { showToast('Par는 3~6 사이여야 합니다'); parEl.value = c.holes[i].par || 4; }
+    else c.holes[i].par = p;
+  }
+  if (yardEl) {
+    var y = parseInt(yardEl.value);
+    c.holes[i].yard = (!isNaN(y) && y >= 0) ? y : 0;
+  }
+  if (hcEl)   {
+    var hc = parseInt(hcEl.value);
+    if (hcEl.value !== '' && (isNaN(hc) || hc < 1 || hc > 18)) { showToast('H/C는 1~18 사이여야 합니다'); hcEl.value = c.holes[i].hc || ''; }
+    else c.holes[i].hc = (!isNaN(hc) && hc >= 1 && hc <= 18) ? hc : 0;
+  }
 
   /* 합계 실시간 업데이트 */
   var parOut=0, yardOut=0, parIn=0, yardIn=0;
@@ -2867,6 +2916,7 @@ function importClubFile() {
     var file = e.target.files[0];
     if (!file) return;
     var reader = new FileReader();
+    reader.onerror = function() { showToast('❌ 파일을 읽을 수 없습니다'); };
     reader.onload = function(ev) {
       var raw = ev.target.result.trim();
       var clean = raw.replace(/```json|```/g,'').trim();
@@ -2904,27 +2954,30 @@ function importClubFile() {
   input.click();
 }
 function exportData() {
-  var data = {
-    version: '1.0',
-    appName: '골프일기',
-    exportedAt: new Date().toLocaleString('ko-KR'),
-    rounds: rounds,
-    companions: companions,
-    clubs: savedClubs,
-    player: player
-  };
-  var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a');
-  a.href   = url;
-  a.download = '골프일기_백업_' + new Date().toISOString().slice(0,10) + '.json';
-  a.click();
-  URL.revokeObjectURL(url);
-  // 백업 시각 저장
-  var s = Object.assign({}, settings, { lastBackup: new Date().toLocaleString('ko-KR') });
-  saveSettingsData(s);
-  renderSettings();
-  showToast('✅ 백업 파일이 저장되었습니다');
+  try {
+    var data = {
+      version: '1.0',
+      appName: '골프일기',
+      exportedAt: new Date().toLocaleString('ko-KR'),
+      rounds: rounds,
+      companions: companions,
+      clubs: savedClubs,
+      player: player
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href   = url;
+    a.download = '골프일기_백업_' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    var s = Object.assign({}, settings, { lastBackup: new Date().toLocaleString('ko-KR') });
+    saveSettingsData(s);
+    renderSettings();
+    showToast('✅ 백업 파일이 저장되었습니다');
+  } catch(err) {
+    showToast('❌ 내보내기 실패: ' + err.message);
+  }
 }
 
 function importData() {
@@ -2935,17 +2988,20 @@ function importData() {
     var file = e.target.files[0];
     if (!file) return;
     var reader = new FileReader();
+    reader.onerror = function() { showToast('❌ 파일을 읽을 수 없습니다'); };
     reader.onload = function(ev) {
       try {
         var imported = JSON.parse(ev.target.result);
-        var importedRounds = imported.rounds || [];
+        if (typeof imported !== 'object' || imported === null) throw new Error('invalid');
+        var importedRounds = Array.isArray(imported.rounds) ? imported.rounds : [];
+        var validRounds = importedRounds.filter(function(r) { return r && r.id && r.date; });
         var existIds = new Set(rounds.map(function(r){ return r.id; }));
-        var merged = rounds.concat(importedRounds.filter(function(r){ return !existIds.has(r.id); }));
+        var merged = rounds.concat(validRounds.filter(function(r){ return !existIds.has(r.id); }));
         saveRoundsData(merged);
-        if (imported.companions) saveCompanionsData(imported.companions);
-        if (imported.clubs)      saveClubsData(imported.clubs);
+        if (Array.isArray(imported.companions)) saveCompanionsData(imported.companions);
+        if (Array.isArray(imported.clubs))      saveClubsData(imported.clubs);
         renderSettings();
-        showToast('✅ ' + importedRounds.length + '개 라운드 불러옴');
+        showToast('✅ ' + validRounds.length + '개 라운드 불러옴');
       } catch(er) {
         showToast('❌ 파일 형식 오류');
       }
