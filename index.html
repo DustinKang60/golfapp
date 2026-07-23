@@ -168,18 +168,9 @@ body::after {
   position: relative;
   transition: color 0.15s;
 }
-.tab-item.active { color: var(--gold); }
-.tab-item.active .tab-icon-wrap::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
-  background: var(--gold);
-  border-radius: 2px;
-}
+/* 활성 탭은 글자만 진하게. 예전엔 아이콘 밑에 금색 밑줄이 붙고
+   아이콘까지 금색으로 변해 그 탭만 튀어 보였다. */
+.tab-item.active { color: var(--white); font-weight: 700; }
 .tab-icon-wrap {
   position: relative;
   width: 28px;
@@ -188,16 +179,19 @@ body::after {
   align-items: center;
   justify-content: center;
 }
+/* 새라운드만 36px이라 하단 탭 크기가 들쭉날쭉했다.
+   다른 탭과 같은 28px로 맞추고, 강조는 초록 배경으로만 준다. */
 .tab-item.tab-new-round .tab-icon-wrap {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   background: linear-gradient(135deg, #2a8a4a, #52cc78);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: 0 2px 10px rgba(82,204,120,0.3);
-  margin-top: -2px;
 }
 .tab-item.tab-new-round { color: var(--gold2); }
-.tab-svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+/* 아이콘은 28px 상자를 꽉 채운다(22→26). 옆의 채워진 초록 상자보다
+   작아 보이던 문제. 색은 활성 여부와 무관하게 고정해 글자만 바뀌게 한다. */
+.tab-svg { width: 26px; height: 26px; fill: none; stroke: var(--gray2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .tab-item.tab-new-round .tab-svg { stroke: #0d2016; width: 20px; height: 20px; stroke-width: 2; }
 
 /* ===== 공통 버튼 ===== */
@@ -542,7 +536,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
     <div class="splash-btns">
       <button class="btn-gold" onclick="onSplashStart()">시작하기</button>
     </div>
-    <div class="splash-foot">작은앱공방 · 강종훈</div>
+    <div class="splash-foot">작은앱공방</div>
   </div>
 </div>
 
@@ -803,7 +797,9 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
   <div class="topbar">
     <div class="topbar-title">📊 분석</div>
     <div style="display:flex;gap:6px;">
-      <button class="btn-ghost" id="analysis-year-btn" onclick="setAnalysisYear('current')" style="font-size:11px;padding:5px 10px;">올해</button>
+      <button class="btn-ghost" id="analysis-prev-btn" onclick="stepAnalysisYear(-1)" style="font-size:13px;padding:5px 8px;">‹</button>
+      <button class="btn-ghost" id="analysis-year-btn" onclick="setAnalysisYear('year')" style="font-size:11px;padding:5px 8px;min-width:52px;">올해</button>
+      <button class="btn-ghost" id="analysis-next-btn" onclick="stepAnalysisYear(1)" style="font-size:13px;padding:5px 8px;">›</button>
       <button class="btn-ghost" id="analysis-all-btn" onclick="setAnalysisYear('all')" style="font-size:11px;padding:5px 10px;">전체</button>
     </div>
   </div>
@@ -924,7 +920,8 @@ var curRoundInfo= {};     // 날짜/날씨/기온/티오프
 var orderedHoles= [];     // 실제 플레이 순서 홀 배열 (전반/후반에 따라 재배열)
 
 // 분석 범위
-var analysisMode = 'current'; // 'current' | 'all'
+var analysisMode = 'year';                     // 'year'(선택 연도) | 'all'(전체)
+var analysisYear = new Date().getFullYear();   // 보고 있는 연도
 
 /* ============================================================
    유틸
@@ -2434,21 +2431,55 @@ function saveRound() {
 /* ============================================================
    분석
    ============================================================ */
+// 기록이 있는 연도 목록 (오름차순). 없으면 올해만.
+function availableYears() {
+  var ys = [];
+  rounds.forEach(function(r){
+    var y = new Date(r.date).getFullYear();
+    if (!isNaN(y) && ys.indexOf(y) === -1) ys.push(y);
+  });
+  ys.sort(function(a,b){ return a-b; });
+  return ys.length ? ys : [new Date().getFullYear()];
+}
+
 function setAnalysisYear(mode) {
   analysisMode = mode;
   renderAnalysis();
 }
 
+// 연도를 앞뒤로 넘긴다. 기록이 있는 연도 사이에서만 이동한다.
+function stepAnalysisYear(delta) {
+  var ys = availableYears();
+  var idx = ys.indexOf(analysisYear);
+  if (idx === -1) { idx = ys.length - 1; }
+  var next = idx + delta;
+  if (next < 0 || next >= ys.length) return;
+  analysisYear = ys[next];
+  analysisMode = 'year';
+  renderAnalysis();
+}
+
 function renderAnalysis() {
-  var year = new Date().getFullYear();
-  var data = analysisMode==='current'
+  var year = analysisYear;
+  var data = analysisMode==='year'
     ? rounds.filter(function(r){ return new Date(r.date).getFullYear()===year; })
     : rounds.slice();
 
-  document.getElementById('analysis-year-btn').style.borderColor = analysisMode==='current'?'var(--gold)':'var(--border)';
-  document.getElementById('analysis-year-btn').style.color = analysisMode==='current'?'var(--gold)':'var(--gray)';
+  // 연도 버튼에 실제 연도를 표시한다. 해가 바뀌어도 지난 해 기록을 찾아볼 수 있게.
+  var ys = availableYears();
+  var yIdx = ys.indexOf(analysisYear);
+  var yBtn = document.getElementById('analysis-year-btn');
+  yBtn.textContent = analysisYear + '년';
+  yBtn.style.borderColor = analysisMode==='year'?'var(--gold)':'var(--border)';
+  yBtn.style.color = analysisMode==='year'?'var(--gold)':'var(--gray)';
   document.getElementById('analysis-all-btn').style.borderColor = analysisMode==='all'?'var(--gold)':'var(--border)';
   document.getElementById('analysis-all-btn').style.color = analysisMode==='all'?'var(--gold)':'var(--gray)';
+  // 기록이 있는 연도 밖으로는 못 넘어가므로, 끝에서는 흐리게 표시한다.
+  var prevB = document.getElementById('analysis-prev-btn');
+  var nextB = document.getElementById('analysis-next-btn');
+  var canPrev = yIdx > 0, canNext = yIdx > -1 && yIdx < ys.length-1;
+  prevB.style.opacity = canPrev ? '1' : '0.25';
+  nextB.style.opacity = canNext ? '1' : '0.25';
 
   var el = document.getElementById('analysis-scroll');
   if (!data.length) {
@@ -2471,56 +2502,67 @@ function renderAnalysis() {
     });
   });
 
-  // 월별 평균
-  var monthData = {};
-  data.forEach(function(r){
-    var mo = new Date(r.date).getMonth()+1;
-    if(!monthData[mo]) monthData[mo]={sum:0,cnt:0};
-    monthData[mo].sum+=r.totalScore;
-    monthData[mo].cnt++;
-  });
-
   var html = '';
   // 핵심 지표
   html += '<div class="highlight-grid">'
     +'<div class="highlight-card"><div class="highlight-icon">🏆</div><div class="highlight-val">'+best+'</div><div class="highlight-lbl">베스트</div></div>'
     +'<div class="highlight-card"><div class="highlight-icon">📈</div><div class="highlight-val">'+avg+'</div><div class="highlight-lbl">평균타수</div></div>'
-    +'<div class="highlight-card"><div class="highlight-icon">🦅</div><div class="highlight-val">'+eagleList.length+'회</div><div class="highlight-lbl">이글</div></div>'
-    +'<div class="highlight-card"><div class="highlight-icon">⛳</div><div class="highlight-val">'+holeinoneList.length+'회</div><div class="highlight-lbl">홀인원</div></div>'
+    // 이글·홀인원은 아마추어에겐 대부분 0회라 4칸 중 2칸이 늘 비었다.
+    // 라운드마다 나올 수 있는 버디와 라운드 수로 바꾸고,
+    // 이글·홀인원은 아래 '특별 기록'에서 실제로 있을 때만 보여준다.
+    +'<div class="highlight-card"><div class="highlight-icon">🐦</div><div class="highlight-val">'+birdieCount+'회</div><div class="highlight-lbl">버디</div></div>'
+    +'<div class="highlight-card"><div class="highlight-icon">⛳</div><div class="highlight-val">'+data.length+'회</div><div class="highlight-lbl">라운드</div></div>'
     +'</div>';
 
-  // 월별 평균 막대
-  var months = Object.keys(monthData).map(Number).sort(function(a,b){return a-b;});
-  if (months.length) {
-    var maxAvg = Math.max.apply(null, months.map(function(m){ return monthData[m].sum/monthData[m].cnt; }));
-    html += '<div class="stat-card">';
-    html += '<div style="font-size:12px;color:var(--gray);margin-bottom:10px;letter-spacing:1px;">월별 평균 타수</div>';
-    months.forEach(function(m){
-      var mAvg = (monthData[m].sum/monthData[m].cnt).toFixed(1);
-      var pct  = Math.round((mAvg/maxAvg)*90);
-      html += '<div class="bar-row">'
-        +'<div class="bar-label">'+m+'월</div>'
-        +'<div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;"></div></div>'
-        +'<div class="bar-val">'+mAvg+'</div>'
-        +'</div>';
-    });
-    html += '</div>';
-  }
+  // ── 타수 추이 (점·선 그래프) ──
+  // 예전엔 가로 막대였는데, 80~100 구간을 0부터 재니 막대 길이가 다 비슷해
+  // 차이가 안 보였고, 골프는 낮을수록 좋은데 막대는 길수록 커서 거꾸로 읽혔다.
+  // 세로 눈금을 실제 점수 범위에 맞춘 선 그래프로 그리면 점이 몇 개뿐이어도
+  // 오르내림이 드러난다.
+  var trend = data.slice()
+    .filter(function(r){ return r.totalScore>0; })
+    .sort(function(a,b){ return new Date(a.date)-new Date(b.date); });
+  if (trend.length > 12) trend = trend.slice(-12);   // 너무 촘촘해지지 않게
 
-  // 최근 5라운드
-  var recent = data.slice().sort(function(a,b){return new Date(b.date)-new Date(a.date);}).slice(0,5);
-  html += '<div class="stat-card">';
-  html += '<div style="font-size:12px;color:var(--gray);margin-bottom:10px;letter-spacing:1px;">최근 라운드 추이</div>';
-  recent.reverse().forEach(function(r){
-    var par = r.coursePar||72;
-    var diff = r.totalScore-par;
-    html += '<div class="bar-row">'
-      +'<div class="bar-label" style="width:60px;font-size:10px;">'+fmtDateShort(r.date).slice(5)+'</div>'
-      +'<div class="bar-track"><div class="bar-fill" style="width:'+(Math.round((r.totalScore/110)*90))+'%;"></div></div>'
-      +'<div class="bar-val" style="width:40px;text-align:right;">'+r.totalScore+'<span style="color:var(--gray);font-size:9px;">('+( diff>0?'+':'')+diff+')</span></div>'
-      +'</div>';
-  });
-  html += '</div>';
+  if (trend.length) {
+    var W=320, H=150, PL=32, PR=12, PT=18, PB=26;
+    var iW=W-PL-PR, iH=H-PT-PB;
+    var vals=trend.map(function(r){ return r.totalScore; });
+    // 세로 눈금은 70·80·90·100처럼 10타 단위로 끊는다.
+    // 다만 70~100을 늘 다 그리면 90타대 기록이 좁은 구간에 몰려 안 보이므로,
+    // 데이터를 감싸는 10단위 구간만 그린다(예: 92~99 → 90~100).
+    var vMin=Math.floor(Math.min.apply(null,vals)/10)*10;
+    var vMax=Math.ceil(Math.max.apply(null,vals)/10)*10;
+    if (vMax-vMin < 10) vMax = vMin + 10;
+    var xAt=function(i){ return trend.length===1 ? PL+iW/2 : PL+iW*(i/(trend.length-1)); };
+    var yAt=function(v){ return PT+iH*((vMax-v)/(vMax-vMin)); };
+    var bestVal=Math.min.apply(null,vals);
+
+    var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;" preserveAspectRatio="xMidYMid meet">';
+    for (var gv=vMin; gv<=vMax; gv+=10) {
+      var gy=yAt(gv);
+      svg+='<line x1="'+PL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-PR)+'" y2="'+gy.toFixed(1)+'" stroke="var(--border)" stroke-width="0.6"/>'
+         +'<text x="'+(PL-5)+'" y="'+(gy+3).toFixed(1)+'" text-anchor="end" font-size="8" fill="var(--gray2)">'+gv+'</text>';
+    }
+    if (trend.length>1) {
+      svg+='<polyline points="'+trend.map(function(r,i){ return xAt(i).toFixed(1)+','+yAt(r.totalScore).toFixed(1); }).join(' ')
+         +'" fill="none" stroke="var(--gold)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>';
+    }
+    trend.forEach(function(r,i){
+      var px=xAt(i), py=yAt(r.totalScore), isBest=r.totalScore===bestVal;
+      svg+='<circle cx="'+px.toFixed(1)+'" cy="'+py.toFixed(1)+'" r="'+(isBest?3.6:2.6)+'" fill="'+(isBest?'var(--gold)':'var(--white)')+'" stroke="var(--gold)" stroke-width="1"/>'
+         +'<text x="'+px.toFixed(1)+'" y="'+(py-7).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="'+(isBest?'var(--gold)':'var(--white)')+'">'+r.totalScore+'</text>';
+      if (trend.length<=6 || i===0 || i===trend.length-1 || i===Math.floor((trend.length-1)/2)) {
+        svg+='<text x="'+px.toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle" font-size="7.5" fill="var(--gray2)">'+fmtDateShort(r.date).slice(5)+'</text>';
+      }
+    });
+    svg+='</svg>';
+
+    html += '<div class="stat-card">'
+      +'<div style="font-size:12px;color:var(--gray);margin-bottom:2px;letter-spacing:1px;">타수 추이</div>'
+      +'<div style="font-size:10px;color:var(--gray2);margin-bottom:6px;">선이 내려갈수록 좋아지고 있어요</div>'
+      +svg+'</div>';
+  }
 
   // 이글/홀인원 기록
   if (eagleList.length || holeinoneList.length) {
@@ -2543,7 +2585,7 @@ function renderAnalysis() {
 
   // 라운드 수
   html += '<div style="text-align:center;padding:12px;font-size:12px;color:var(--gray2);">'
-    +(analysisMode==='current'?year+'년 · ':'')+data.length+'개 라운드 기준'
+    +(analysisMode==='year'?year+'년 · ':'전체 · ')+data.length+'개 라운드 기준'
     +'</div>';
 
   el.innerHTML = html;
@@ -2626,7 +2668,7 @@ function renderSettings() {
   +'</div>';
 
   html += '<div style="text-align:center;margin-bottom:8px;font-size:11px;color:var(--gray2);letter-spacing:1px;">'
-    +'총 '+rounds.length+'개 라운드 · 골프일기 v1.0<br>작은앱공방 · 강종훈</div>';
+    +'총 '+rounds.length+'개 라운드 · 골프일기 v1.0<br>작은앱공방</div>';
 
   document.getElementById('settings-scroll').innerHTML = html;
 }
@@ -2698,7 +2740,14 @@ function clearApiKey() {
 async function callClaudeVision(base64, mimeType, prompt) {
   var apiKey = loadApiKey();
   if (!apiKey) { showToast('설정에서 API Key를 먼저 입력해주세요'); return null; }
-  var res = await fetch('https://api.anthropic.com/v1/messages', {
+  // 응답이 아예 안 오는 경우(전파 약한 골프장 등) 분석 화면이 영원히 멈추지
+  // 않도록 60초에서 끊는다. AbortController가 없으면 fetch는 무한정 기다린다.
+  var ctrl = new AbortController();
+  var timer = setTimeout(function(){ ctrl.abort(); }, 60000);
+  var res;
+  try {
+    res = await fetch('https://api.anthropic.com/v1/messages', {
+    signal: ctrl.signal,
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -2718,6 +2767,12 @@ async function callClaudeVision(base64, mimeType, prompt) {
       }]
     })
   });
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('응답이 너무 늦어 중단했어요. 연결 상태를 확인하고 다시 시도해 주세요.');
+    throw new Error('인터넷에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.');
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     var err = await res.json().catch(function(){ return {}; });
     throw new Error((err.error && err.error.message) || 'API 오류 (' + res.status + ')');
@@ -2725,7 +2780,13 @@ async function callClaudeVision(base64, mimeType, prompt) {
   var data = await res.json();
   var text = data.content.map(function(b){ return b.text || ''; }).join('');
   var clean = text.replace(/```json|```/g, '').trim();
-  return JSON.parse(clean);
+  try {
+    return JSON.parse(clean);
+  } catch (e) {
+    // 사진이 흐리거나 카드가 잘리면 AI가 JSON 대신 설명 문장을 돌려준다.
+    // 예전에는 'Unexpected token ...' 같은 알 수 없는 메시지가 그대로 떴다.
+    throw new Error('사진에서 스코어를 읽지 못했어요. 밝은 곳에서 카드 전체가 나오게 다시 찍어 주세요.');
+  }
 }
 
 /* ============================================================
