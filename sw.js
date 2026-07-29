@@ -1,5 +1,5 @@
 'use strict';
-var CACHE_NAME = 'golfapp-v5';
+var CACHE_NAME = 'golfapp-v6';
 var ASSETS = [
   '/golfapp/',
   '/golfapp/index.html',

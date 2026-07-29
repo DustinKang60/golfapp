@@ -2879,10 +2879,14 @@ function showNewClubConfirm(parsed) {
       + '</div>'
       + '<div style="flex-shrink:0;padding:12px 16px 28px;display:flex;gap:8px;">'
         + '<button class="btn-outline" style="flex:1;padding:12px;font-size:13px;" onclick="document.getElementById(\'auto-confirm-overlay\').remove();autoInputNewClub();">🔄 다시 찍기</button>'
-        + '<button class="btn-gold" style="flex:1;padding:12px;font-size:13px;" onclick="applyNewClubFromAI('+JSON.stringify(parsed).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026')+')">💾 저장 및 시작</button>'
+        + '<button id="new-club-apply" class="btn-gold" style="flex:1;padding:12px;font-size:13px;">💾 저장 및 시작</button>'
       + '</div>'
     + '</div>';
   document.body.appendChild(ov);
+  // 위 applyAutoScores와 같은 이유로 onclick 속성에 JSON을 넣지 않는다.
+  document.getElementById('new-club-apply').onclick = function() {
+    applyNewClubFromAI(parsed);
+  };
 }
 
 function applyNewClubFromAI(parsed) {
@@ -2974,7 +2978,6 @@ function showScoreConfirm(players) {
   });
   tableHtml += '</tbody></table>';
 
-  var safeData = JSON.stringify(players).replace(/</g,'\\u003c').replace(/>/g,'\\u003e').replace(/&/g,'\\u0026');
   ov.innerHTML =
     '<div style="flex:1;" onclick="this.parentElement.remove()"></div>'
     + '<div style="background:var(--dark);border-radius:20px 20px 0 0;border-top:1px solid var(--border);max-height:85dvh;display:flex;flex-direction:column;">'
@@ -2988,10 +2991,16 @@ function showScoreConfirm(players) {
       + '</div>'
       + '<div style="flex-shrink:0;padding:12px 16px 28px;display:flex;gap:8px;">'
         + '<button class="btn-outline" style="flex:1;padding:12px;font-size:13px;" onclick="document.getElementById(\'auto-confirm-overlay\').remove();startAutoScoring();">🔄 다시 찍기</button>'
-        + '<button class="btn-gold" style="flex:1;padding:12px;font-size:13px;" onclick="applyAutoScores('+safeData+')">✅ 적용하기</button>'
+        + '<button id="auto-score-apply" class="btn-gold" style="flex:1;padding:12px;font-size:13px;">✅ 적용하기</button>'
       + '</div>'
     + '</div>';
   document.body.appendChild(ov);
+  // 인식 결과를 onclick 속성에 문자열로 넣으면 JSON 안의 쌍따옴표가
+  // 속성을 끊어버려서 버튼이 아무 반응도 하지 않는다. 데이터는 클로저로
+  // 넘기고 핸들러를 직접 연결한다.
+  document.getElementById('auto-score-apply').onclick = function() {
+    applyAutoScores(players);
+  };
 }
 
 function applyAutoScores(players) {
