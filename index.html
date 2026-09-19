@@ -716,7 +716,7 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
   </div>
   <div style="flex-shrink:0;padding:12px 16px 24px;">
     <div style="display:flex;gap:8px;">
-      <button class="btn-outline" style="flex:1;padding:14px 8px;font-size:13px;" onclick="startScoring()">✏️ 수동입력</button>
+      <button class="btn-outline" id="round-manual-btn" style="flex:1;padding:14px 8px;font-size:13px;" onclick="startScoring()">✏️ 수동입력</button>
       <button class="btn-gold" style="flex:1;padding:14px 8px;font-size:13px;" onclick="startAutoScoring()">📷 자동입력</button>
     </div>
   </div>
@@ -736,8 +736,8 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
       <div class="progress-info"><span id="progress-txt">진행</span><span id="progress-frac">1/18</span></div>
       <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:5%;"></div></div>
     </div>
-    <div class="hole-header">
-      <div class="hole-num-lbl">HOLE</div>
+    <div class="hole-header" onclick="showHolePicker()" style="cursor:pointer;">
+      <div class="hole-num-lbl">HOLE <span style="font-size:9px;opacity:0.7;">▼ 탭하여 이동</span></div>
       <div class="hole-big" id="hole-num-big">1</div>
       <div class="hole-details">
         <div class="hole-detail-item"><div class="hole-detail-val" id="hole-par-val">Par 4</div><div class="hole-detail-lbl">PAR</div></div>
@@ -762,9 +762,9 @@ textarea.input-field { resize: none; overflow: hidden; min-height: 80px; line-he
      ============================================================ -->
 <div class="screen" id="screen-complete">
   <div class="topbar">
-    <div style="width:38px;"></div>
+    <button class="topbar-back" onclick="backToScoring()">‹</button>
     <div class="topbar-title small">라운드 완료</div>
-    <div style="width:38px;"></div>
+    <button class="topbar-action" onclick="backToScoring()">✏️ 수정</button>
   </div>
   <div class="scroll-area">
     <div class="complete-header">
@@ -1002,6 +1002,8 @@ function showScreen(name) {
   if (name === 'analysis') { renderAnalysis(); }
   if (name === 'settings') { renderSettings(); }
   if (name === 'search')   { var si = document.getElementById('club-search-input'); if(si) si.value=''; renderMyClubsList(); }
+  // 완료 화면에서 돌아올 때 사진 찍기 전에 그려 둔 옛 값이 남지 않도록 항상 다시 그린다
+  if (name === 'scoring' && curScores.length) { renderHole(); }
   if (name === 'course')   {
     startHole = 'front';
     document.querySelectorAll('.start-hole-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -1035,8 +1037,11 @@ var PREV_SCREEN = {
 
 window.addEventListener('popstate', function(e) {
   // 1. 오버레이가 열려있으면 오버레이만 닫기
-  var detailOv = document.getElementById('round-detail-overlay');
-  if (detailOv) { detailOv.remove(); history.pushState({}, ''); return; }
+  var removable = ['es-hole-picker', 'auto-confirm-overlay', 'edit-scores-modal', 'edit-info-modal', 'round-detail-overlay'];
+  for (var ri = 0; ri < removable.length; ri++) {
+    var rov = document.getElementById(removable[ri]);
+    if (rov) { rov.remove(); history.pushState({}, ''); return; }
+  }
 
   var overlayIds = ['overlay-summary', 'overlay-add-companion'];
   for (var i = 0; i < overlayIds.length; i++) {
@@ -1539,7 +1544,10 @@ function esRender() {
         +'<div style="font-size:13px;font-weight:500;color:var(--white);">'+esc(r.clubName)+'</div>'
         +'<div style="font-size:11px;color:var(--gray);margin-top:1px;">'+esc(r.courseName)+' · '+fmtDateShort(r.date)+'</div>'
       +'</div>'
-      +'<button onclick="document.getElementById(\'edit-scores-modal\').remove()" style="background:none;border:none;color:var(--gray);font-size:24px;line-height:1;padding:4px;">✕</button>'
+      +'<div style="display:flex;align-items:center;gap:4px;">'
+        +'<button class="topbar-action" onclick="saveRoundScores(\''+esRoundId+'\')">💾 저장</button>'
+        +'<button onclick="document.getElementById(\'edit-scores-modal\').remove()" style="background:none;border:none;color:var(--gray);font-size:24px;line-height:1;padding:4px;">✕</button>'
+      +'</div>'
     +'</div>'
     // 진행 바
     +'<div style="background:var(--dark);flex-shrink:0;padding:8px 16px 10px;">'
@@ -1601,40 +1609,11 @@ function esNextHole() {
 }
 
 function esShowHolePicker() {
-  var old = document.getElementById('es-hole-picker');
-  if (old) { old.remove(); return; }
-  var picker = document.createElement('div');
-  picker.id = 'es-hole-picker';
-  picker.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;';
-  var btns = '';
-  // 3열 그리드로 홀 번호 표시
-  esScores.forEach(function(hs, i) {
-    var isCur = i === esHoleIdx;
-    btns += '<button onclick="esJumpHole('+i+')" style="'
-      +'padding:10px 4px;background:'+(isCur?'var(--gold)':'var(--card2)')+';'
-      +'border:1px solid '+(isCur?'var(--gold)':'var(--border)')+';'
-      +'border-radius:8px;color:'+(isCur?'#0d2016':'var(--white)')+';'
-      +'font-size:14px;font-weight:'+(isCur?'700':'400')+';cursor:pointer;">'
-      +(hs.holeNo||i+1)+'</button>';
-  });
-  picker.innerHTML =
-    '<div style="width:100%;background:var(--dark);border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
-      +'<div style="font-size:14px;font-weight:500;color:var(--gold);">홀 선택</div>'
-      +'<button onclick="document.getElementById(\'es-hole-picker\').remove()" style="background:none;border:none;color:var(--gray);font-size:22px;line-height:1;">✕</button>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">'
-    +btns
-    +'</div>'
-    +'</div>';
-  picker.addEventListener('click', function(e){ if(e.target===picker) picker.remove(); });
-  document.body.appendChild(picker);
+  openHolePicker(esScores, esHoleIdx, esJumpHole);
 }
 
 function esJumpHole(idx) {
   esHoleIdx = idx;
-  var picker = document.getElementById('es-hole-picker');
-  if (picker) picker.remove();
   esRender();
 }
 
@@ -1658,6 +1637,8 @@ function saveRoundScores(id) {
     if (ms) newTotal += ms.score;
   });
   r.totalScore = newTotal;
+  // 버디·이글·홀인원 집계도 다시 — 분석 화면이 수정 전 값을 세지 않도록
+  r.specials = computeSpecials(r.scores, firstName, r.date);
   saveRoundsData(rounds);
   var modal = document.getElementById('edit-scores-modal');
   if (modal) modal.remove();
@@ -2095,6 +2076,8 @@ function initRoundInfo() {
 
   // 동반자 칩 렌더링
   renderCompanionChips();
+  document.getElementById('companion-direct').value = '';
+  setPendingScoreHint(!!pendingAutoScores);
 }
 
 function selectWeather(w, el) {
@@ -2158,6 +2141,14 @@ function startScoring() {
 
   showScreen('scoring');
   renderHole();
+
+  // 시나리오 1(새 골프장 사진)에서 넘어온 스코어가 있으면 바로 확인창으로
+  if (pendingAutoScores) {
+    var pending = pendingAutoScores;
+    pendingAutoScores = null;
+    setPendingScoreHint(false);
+    showScoreConfirm(pending);
+  }
 }
 
 /* ============================================================
@@ -2272,6 +2263,58 @@ function nextHole() {
   else { curHole++; renderHole(); document.getElementById('scoring-scroll').scrollTop=0; }
 }
 
+// 완료 화면 → 스코어 화면. 메모를 적어 뒀으면 사라진다고 알린다 (뒤로가기와 같은 규칙).
+function backToScoring() {
+  var memoVal   = (document.getElementById('memo-note')   || {}).value || '';
+  var caddieVal = (document.getElementById('memo-caddie') || {}).value || '';
+  if ((memoVal || caddieVal) && !confirm('스코어 수정 화면으로 돌아가면 메모와 캐디 정보가 초기화됩니다.\n계속하시겠어요?')) return;
+  showScreen('scoring');
+}
+
+// 홀 헤더를 탭하면 홀 번호 격자로 바로 이동
+function showHolePicker() {
+  openHolePicker(curScores, curHole, function(idx) {
+    curHole = idx;
+    renderHole();
+    document.getElementById('scoring-scroll').scrollTop = 0;
+  });
+}
+
+// 홀 선택 격자 (스코어 입력·저장 후 수정 공용)
+function openHolePicker(holeList, curIdx, onPick) {
+  var old = document.getElementById('es-hole-picker');
+  if (old) { old.remove(); return; }
+  var picker = document.createElement('div');
+  picker.id = 'es-hole-picker';
+  picker.style.cssText = 'position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;';
+  var btns = '';
+  holeList.forEach(function(hs, i) {
+    var isCur = i === curIdx;
+    btns += '<button data-idx="'+i+'" style="'
+      +'padding:10px 4px;background:'+(isCur?'var(--gold)':'var(--card2)')+';'
+      +'border:1px solid '+(isCur?'var(--gold)':'var(--border)')+';'
+      +'border-radius:8px;color:'+(isCur?'#0d2016':'var(--white)')+';'
+      +'font-size:14px;font-weight:'+(isCur?'700':'400')+';cursor:pointer;">'
+      +(hs.holeNo||i+1)+'</button>';
+  });
+  picker.innerHTML =
+    '<div style="width:100%;background:var(--dark);border-radius:16px 16px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px));">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">'
+      +'<div style="font-size:14px;font-weight:500;color:var(--gold);">홀 선택</div>'
+      +'<button onclick="document.getElementById(\'es-hole-picker\').remove()" style="background:none;border:none;color:var(--gray);font-size:22px;line-height:1;">✕</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;">'
+    +btns
+    +'</div>'
+    +'</div>';
+  picker.addEventListener('click', function(e){
+    if (e.target === picker) { picker.remove(); return; }
+    var b = e.target.closest('button[data-idx]');
+    if (b) { picker.remove(); onPick(parseInt(b.dataset.idx, 10)); }
+  });
+  document.body.appendChild(picker);
+}
+
 /* ============================================================
    스코어 요약 오버레이
    ============================================================ */
@@ -2383,6 +2426,20 @@ function showCompleteScreen() {
 /* ============================================================
    라운드 저장
    ============================================================ */
+// 홀 배열에서 내 버디·이글·홀인원 목록 (저장·수정 공용)
+function computeSpecials(holes, myName, date) {
+  var out = [];
+  holes.forEach(function(hs){
+    var ms = hs.scores.find(function(s){ return s.name===myName; });
+    if (!ms) return;
+    var rel = ms.score - hs.par;
+    if (ms.score===1)  out.push({type:'holeinone', hole:hs.holeNo, date:date});
+    else if (rel<=-2)  out.push({type:'eagle',     hole:hs.holeNo, date:date});
+    else if (rel===-1) out.push({type:'birdie',    hole:hs.holeNo, date:date});
+  });
+  return out;
+}
+
 function saveRound() {
   var myName = player.name||'나';
   var myTotal=0, par=0;
@@ -2393,15 +2450,7 @@ function saveRound() {
   });
 
   // 특별 기록 체크 (이글, 홀인원)
-  var specials = [];
-  curScores.forEach(function(hs){
-    var ms=hs.scores.find(function(s){return s.name===myName;});
-    if(!ms) return;
-    var rel=ms.score-hs.par;
-    if(ms.score===1) specials.push({type:'holeinone', hole:hs.holeNo, date:curRoundInfo.date});
-    else if(rel<=-2) specials.push({type:'eagle',     hole:hs.holeNo, date:curRoundInfo.date});
-    else if(rel===-1)specials.push({type:'birdie',    hole:hs.holeNo, date:curRoundInfo.date});
-  });
+  var specials = computeSpecials(curScores, myName, curRoundInfo.date);
 
   var companions = curPlayers.filter(function(n){ return n !== myName; });
   var newRound = {
@@ -2737,36 +2786,44 @@ function clearApiKey() {
 /* ============================================================
    Claude Vision API 공통 호출
    ============================================================ */
-async function callClaudeVision(base64, mimeType, prompt) {
+// 스코어 인식은 4명×18홀 표를 한 번에 읽는 일이라 Haiku로는 자릿수·행 밀림이
+// 잦았다. Sonnet 5 로 올린다 (사진 1장 기준 회당 몇 센트 차이).
+var VISION_MODEL = 'claude-sonnet-5';
+
+// schema 를 주면 structured outputs 로 받는다 — JSON 대신 설명문이 와서
+// 파싱에 실패하는 경우 자체가 사라진다.
+async function callClaudeVision(base64, mimeType, prompt, schema) {
   var apiKey = loadApiKey();
   if (!apiKey) { showToast('설정에서 API Key를 먼저 입력해주세요'); return null; }
   // 응답이 아예 안 오는 경우(전파 약한 골프장 등) 분석 화면이 영원히 멈추지
-  // 않도록 60초에서 끊는다. AbortController가 없으면 fetch는 무한정 기다린다.
+  // 않도록 90초에서 끊는다. AbortController가 없으면 fetch는 무한정 기다린다.
   var ctrl = new AbortController();
-  var timer = setTimeout(function(){ ctrl.abort(); }, 60000);
+  var timer = setTimeout(function(){ ctrl.abort(); }, 90000);
+  var body = {
+    model: VISION_MODEL,
+    max_tokens: 4000,
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
+        { type: 'text', text: prompt }
+      ]
+    }]
+  };
+  if (schema) body.output_config = { format: { type: 'json_schema', schema: schema } };
   var res;
   try {
     res = await fetch('https://api.anthropic.com/v1/messages', {
-    signal: ctrl.signal,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true'
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5',
-      max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: [
-          { type: 'image', source: { type: 'base64', media_type: mimeType, data: base64 } },
-          { type: 'text', text: prompt }
-        ]
-      }]
-    })
-  });
+      signal: ctrl.signal,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify(body)
+    });
   } catch (e) {
     if (e.name === 'AbortError') throw new Error('응답이 너무 늦어 중단했어요. 연결 상태를 확인하고 다시 시도해 주세요.');
     throw new Error('인터넷에 연결할 수 없어요. 연결을 확인하고 다시 시도해 주세요.');
@@ -2778,15 +2835,58 @@ async function callClaudeVision(base64, mimeType, prompt) {
     throw new Error((err.error && err.error.message) || 'API 오류 (' + res.status + ')');
   }
   var data = await res.json();
-  var text = data.content.map(function(b){ return b.text || ''; }).join('');
+  if (data.stop_reason === 'refusal') throw new Error('이 사진은 분석할 수 없어요. 스코어카드만 나오게 다시 찍어 주세요.');
+  var text = (data.content || []).map(function(b){ return b.text || ''; }).join('');
   var clean = text.replace(/```json|```/g, '').trim();
   try {
     return JSON.parse(clean);
   } catch (e) {
     // 사진이 흐리거나 카드가 잘리면 AI가 JSON 대신 설명 문장을 돌려준다.
-    // 예전에는 'Unexpected token ...' 같은 알 수 없는 메시지가 그대로 떴다.
     throw new Error('사진에서 스코어를 읽지 못했어요. 밝은 곳에서 카드 전체가 나오게 다시 찍어 주세요.');
   }
+}
+
+/* ============================================================
+   인식 결과 정규화
+   ============================================================ */
+// 스코어카드 표기 안내 — 한국 골프장 카드는 절대 타수 대신 파 대비(0/+1/-1)로
+// 찍혀 나오는 경우가 많다. 프롬프트에서 변환을 지시하고, 그래도 상대값이
+// 오면 normalizeScores 가 한 번 더 잡는다.
+var SCORE_NOTATION_HINT =
+  '주의: 한국 골프장 스코어카드는 타수를 파 대비 상대값(0, +1, +2, -1 등)으로 표기하는 경우가 많습니다. '
+  + '셀에 0 이나 +1 처럼 적혀 있으면 그것은 상대값이므로, 반드시 해당 홀의 PAR 에 더해 절대 타수(예: 파4 홀의 +1 → 5)로 변환해서 답하세요. '
+  + '절대 타수는 항상 1 이상입니다. 카드에 플레이어별 합계(TOTAL)가 있으면 total 에 그대로 적어 검산에 쓰게 해 주세요. '
+  + '읽을 수 없는 칸은 null 로 두세요.';
+
+// 이름 비교용 — 공백·괄호·(나) 같은 꼬리표 차이로 같은 사람을 못 알아보는 일을 막는다.
+function normName(s) {
+  return String(s || '').replace(/\(.*?\)/g, '').replace(/[\s·.\-_]/g, '').toLowerCase();
+}
+
+// AI 가 돌려준 홀별 값을 정수 절대 타수로 만든다.
+// - "+1", "4", null 같은 값 → 숫자
+// - 0 이하가 하나라도 있거나 합계가 파 합계의 60% 미만이면 상대값으로 보고 파를 더한다
+//   (18홀 파72 기준: 상대값 합계는 커야 30대, 절대 타수 합계는 최소 54 근처라 겹치지 않는다)
+// - null 은 파로 채우고, 1~20 으로 자른다
+function normalizeScores(raw, pars) {
+  var vals = [];
+  for (var i = 0; i < pars.length; i++) {
+    var v = raw ? raw[i] : null;
+    if (typeof v === 'string') v = v.replace(/[^\d\-+]/g, '');
+    var n = (v === null || v === undefined || v === '') ? null : parseInt(v, 10);
+    vals.push(isNaN(n) ? null : n);
+  }
+  var known = vals.filter(function(v){ return v !== null; });
+  var parSum = 0, knownParSum = 0, sum = 0;
+  pars.forEach(function(p, i){ parSum += p; if (vals[i] !== null) { knownParSum += p; sum += vals[i]; } });
+  var relative = known.length > 0 && (
+    known.some(function(v){ return v <= 0; }) ||
+    sum < knownParSum * 0.6
+  );
+  return vals.map(function(v, i) {
+    var s = (v === null) ? pars[i] : (relative ? pars[i] + v : v);
+    return Math.max(1, Math.min(20, s));
+  });
 }
 
 /* ============================================================
@@ -2815,19 +2915,60 @@ function openCamera(onCapture) {
 /* ============================================================
    시나리오 1 — 새 골프장: 카메라로 코스정보+스코어 자동입력
    ============================================================ */
+var NEW_CLUB_SCHEMA = {
+  type: 'object',
+  properties: {
+    clubName:   { type: 'string' },
+    courseName: { type: 'string' },
+    region:     { type: 'string' },
+    country:    { type: 'string' },
+    holes: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          no:   { type: 'integer' },
+          par:  { type: 'integer' },
+          yard: { type: ['integer', 'null'] },
+          hc:   { type: ['integer', 'null'] }
+        },
+        required: ['no', 'par', 'yard', 'hc'],
+        additionalProperties: false
+      }
+    },
+    players: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name:   { type: 'string' },
+          scores: { type: 'array', items: { type: ['integer', 'null'] } },
+          total:  { type: ['integer', 'null'] }
+        },
+        required: ['name', 'scores', 'total'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['clubName', 'courseName', 'region', 'country', 'holes', 'players'],
+  additionalProperties: false
+};
+
 function autoInputNewClub() {
   if (!loadApiKey()) { showToast('설정에서 API Key를 먼저 입력해주세요'); return; }
   openCamera(function(base64, mimeType) {
     showAutoOverlay('📷 스코어카드 분석 중...');
     var prompt = '이 골프 스코어카드 사진을 분석해주세요.\n'
-      + '골프장명, 코스명, 각 홀의 Par/Yard/HC(핸디캡), 그리고 모든 플레이어의 홀별 타수를 읽어주세요.\n'
-      + 'JSON 형식으로만 답변해주세요 (마크다운 없이):\n'
-      + '{"clubName":"골프장명","courseName":"코스명","region":"","country":"KR",'
-      + '"holes":[{"no":1,"par":4,"yard":400,"hc":1},...18개],'
-      + '"players":[{"name":"이름","scores":[4,5,3,...18개]},...]}';
-    callClaudeVision(base64, mimeType, prompt).then(function(parsed) {
+      + '골프장명, 코스명, 각 홀의 Par/Yard/HC(핸디캡), 그리고 모든 플레이어의 홀별 절대 타수를 읽어주세요.\n'
+      + '전반 9홀·후반 9홀이 코스 이름별로 나뉘어 있으면 카드에 인쇄된 순서대로 1~18번으로 이어 붙이고, courseName 은 "전반코스·후반코스" 처럼 합쳐 적으세요.\n'
+      + SCORE_NOTATION_HINT + '\n'
+      + '홀 수는 카드에 있는 만큼(보통 18개) 넣고, scores 배열 길이는 홀 수와 같아야 합니다.';
+    callClaudeVision(base64, mimeType, prompt, NEW_CLUB_SCHEMA).then(function(parsed) {
       hideAutoOverlay();
       if (!parsed) return;
+      // 파를 기준으로 타수 정규화 (상대값·문자열·null 정리)
+      var pars = (parsed.holes || []).map(function(h){ return parseInt(h.par, 10) || 4; });
+      (parsed.players || []).forEach(function(p){ p.scores = normalizeScores(p.scores, pars); });
       showNewClubConfirm(parsed);
     }).catch(function(err) {
       hideAutoOverlay();
@@ -2863,6 +3004,14 @@ function showNewClubConfirm(parsed) {
       + players.map(function(p){ return '<td style="padding:4px 2px;text-align:center;border-bottom:1px solid var(--border);">'+(p.scores&&p.scores[i]!==undefined?p.scores[i]:'–')+'</td>'; }).join('')
       + '</tr>';
   });
+  // 합계 행 — 카드의 TOTAL 과 다르면 어느 플레이어가 잘못 읽혔는지 바로 보인다
+  holesHtml += '<tr><td colspan="4" style="padding:5px 2px;text-align:center;color:var(--gold);font-weight:700;">합계</td>'
+    + players.map(function(p){
+        var tot = (p.scores||[]).reduce(function(s,v){ return s+v; }, 0);
+        var mismatch = (p.total !== null && p.total !== undefined && p.total !== tot);
+        return '<td style="padding:5px 2px;text-align:center;font-weight:700;color:'+(mismatch?'var(--red)':'var(--gold2)')+';">'+tot+(mismatch?'<div style="font-size:9px;font-weight:400;">카드 '+p.total+'</div>':'')+'</td>';
+      }).join('')
+    + '</tr>';
   holesHtml += '</tbody></table>';
 
   ov.innerHTML =
@@ -2872,7 +3021,7 @@ function showNewClubConfirm(parsed) {
         + '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>'
         + '<div style="font-size:15px;font-weight:600;color:var(--white);margin-bottom:2px;">📷 인식 결과 확인</div>'
         + '<div style="font-size:13px;color:var(--gold);">'+esc(parsed.clubName||'')+(parsed.courseName?' · '+esc(parsed.courseName):'')+'</div>'
-        + '<div style="font-size:11px;color:var(--gray2);margin-top:4px;">내용이 맞으면 저장 및 시작을 눌러주세요</div>'
+        + '<div style="font-size:11px;color:var(--gray2);margin-top:4px;">코스 정보가 맞으면 저장 및 시작을 눌러주세요. 스코어는 다음 단계에서 고칠 수 있어요.</div>'
       + '</div>'
       + '<div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 8px;">'
         + holesHtml
@@ -2914,15 +3063,22 @@ function applyNewClubFromAI(parsed) {
   else clubs.push(club);
   saveClubsData(clubs);
 
-  // 라운드 시작 준비
+  // 라운드 시작 준비 — 코스 선택 화면을 건너뛰므로 시작 홀은 카드 순서(전반부터)로 고정
   curClub = club;
   curCourse = club.courses[0];
+  startHole = 'front';
   showScreen('round-info');
   initRoundInfo();
 
-  // 스코어도 파싱된 경우 자동입력 예약
+  // 스코어도 파싱된 경우 — 라운드 정보 입력 뒤 startScoring() 에서 확인창으로 이어진다.
+  // 동반자 칸에는 나를 뺀 나머지 이름을 미리 채워 준다.
   if (parsed.players && parsed.players.length) {
     pendingAutoScores = parsed.players;
+    var myKey = normName(player.name || '나');
+    var others = parsed.players.map(function(p){ return p.name; })
+      .filter(function(n){ return normName(n) !== myKey; });
+    document.getElementById('companion-direct').value = others.join(', ');
+    setPendingScoreHint(true);
   }
   showToast('✅ ' + club.name + ' 등록 완료');
 }
@@ -2930,23 +3086,59 @@ function applyNewClubFromAI(parsed) {
 /* ============================================================
    시나리오 2 — 기존 골프장: 카메라로 스코어만 자동입력
    ============================================================ */
-var pendingAutoScores = null;
+var pendingAutoScores = null;   // 시나리오 1 에서 넘어온 플레이어별 스코어 (startScoring 이 소비)
+
+// 라운드정보 화면의 왼쪽 버튼 — 인식된 스코어가 대기 중이면 그걸 적용하는 버튼으로 바뀐다
+function setPendingScoreHint(on) {
+  var btn = document.getElementById('round-manual-btn');
+  if (btn) btn.textContent = on ? '✅ 인식 스코어 적용' : '✏️ 수동입력';
+}
+
+var SCORES_SCHEMA = {
+  type: 'object',
+  properties: {
+    players: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name:   { type: 'string' },
+          scores: { type: 'array', items: { type: ['integer', 'null'] } },
+          total:  { type: ['integer', 'null'] }
+        },
+        required: ['name', 'scores', 'total'],
+        additionalProperties: false
+      }
+    }
+  },
+  required: ['players'],
+  additionalProperties: false
+};
 
 function startAutoScoring() {
   if (!loadApiKey()) { showToast('설정에서 API Key를 먼저 입력해주세요'); return; }
+  // 새 사진을 찍는 것이므로 시나리오 1 에서 남은 대기 스코어는 버린다
+  pendingAutoScores = null;
   // 먼저 startScoring()으로 curScores 초기화
   startScoring();
   openCamera(function(base64, mimeType) {
     showAutoOverlay('📷 스코어카드 분석 중...');
     var playerNames = curPlayers.join(', ');
-    var prompt = '이 골프 스코어카드 사진에서 플레이어별 홀별 타수를 읽어주세요.\n'
+    // 카드 인쇄 순서(코스 홀 순서) 기준 파 목록 — 후반 시작이라도 카드는 1번부터다
+    var courseHoles = (curCourse && curCourse.holes) ? curCourse.holes : [];
+    var parLine = courseHoles.map(function(h){ return h.no + '번 파' + h.par; }).join(', ');
+    var prompt = '이 골프 스코어카드 사진에서 플레이어별 홀별 절대 타수를 읽어주세요.\n'
       + '골프장: ' + (curClub ? curClub.name : '') + ', 코스: ' + (curCourse ? curCourse.name : '') + '\n'
-      + '예상 플레이어: ' + playerNames + '\n'
-      + 'JSON 형식으로만 답변해주세요 (마크다운 없이):\n'
-      + '{"players":[{"name":"이름","scores":[4,5,3,...18개]},...]}';
-    callClaudeVision(base64, mimeType, prompt).then(function(parsed) {
+      + '이 코스의 홀별 파: ' + parLine + '\n'
+      + '예상 플레이어: ' + playerNames + ' (카드의 이름을 이 목록과 맞춰 적되, 목록에 없는 사람은 카드 이름 그대로 적으세요)\n'
+      + '전반·후반이 나뉘어 있으면 카드에 인쇄된 순서대로 1~' + (courseHoles.length || 18) + '번으로 이어 붙이세요.\n'
+      + SCORE_NOTATION_HINT + '\n'
+      + 'scores 배열 길이는 ' + (courseHoles.length || 18) + ' 이어야 합니다.';
+    callClaudeVision(base64, mimeType, prompt, SCORES_SCHEMA).then(function(parsed) {
       hideAutoOverlay();
-      if (!parsed || !parsed.players) { showToast('❌ 스코어를 인식하지 못했습니다'); return; }
+      if (!parsed || !parsed.players || !parsed.players.length) { showToast('❌ 스코어를 인식하지 못했습니다'); return; }
+      var pars = courseHoles.map(function(h){ return h.par; });
+      parsed.players.forEach(function(p){ p.scores = normalizeScores(p.scores, pars); });
       showScoreConfirm(parsed.players);
     }).catch(function(err) {
       hideAutoOverlay();
@@ -2955,6 +3147,12 @@ function startAutoScoring() {
   });
 }
 
+/* ============================================================
+   인식 결과 확인 — 셀을 직접 고칠 수 있는 표
+   ============================================================ */
+// 행 = 홀(카드 인쇄 순서), 열 = 플레이어. 18열 가로표는 폰에서 안 보여서 세로로 눕혔다.
+var scRows = [];   // 확인창에서 편집 중인 값 [{name, scores:[...]}]
+
 function showScoreConfirm(players) {
   var old = document.getElementById('auto-confirm-overlay');
   if (old) old.remove();
@@ -2962,32 +3160,35 @@ function showScoreConfirm(players) {
   ov.id = 'auto-confirm-overlay';
   ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;overflow:hidden;';
 
-  var tableHtml = '<table style="width:100%;border-collapse:collapse;font-size:11px;">'
-    + '<thead><tr>'
-    + '<th style="padding:4px 2px;color:var(--gold);border-bottom:1px solid var(--border);">이름</th>'
-    + Array.from({length:18},function(_,i){ return '<th style="padding:4px 2px;color:var(--gray);border-bottom:1px solid var(--border);">'+(i+1)+'</th>'; }).join('')
-    + '<th style="padding:4px 2px;color:var(--gold2);border-bottom:1px solid var(--border);">합계</th>'
+  var courseHoles = (curCourse && curCourse.holes) ? curCourse.holes : [];
+  scRows = players.map(function(p){ return { name: p.name, total: p.total, scores: (p.scores||[]).slice() }; });
+
+  var t = '<table class="sc-edit-table" style="width:100%;">'
+    + '<thead><tr><th style="width:24px;">홀</th><th style="width:28px;">Par</th>'
+    + scRows.map(function(p){ return '<th>'+esc(String(p.name).slice(0,4))+'</th>'; }).join('')
     + '</tr></thead><tbody>';
-  players.forEach(function(p) {
-    var total = (p.scores||[]).reduce(function(s,v){ return s+v; }, 0);
-    tableHtml += '<tr>'
-      + '<td style="padding:4px 3px;color:var(--green);font-weight:600;border-bottom:1px solid var(--border);white-space:nowrap;">'+esc(p.name)+'</td>'
-      + (p.scores||[]).map(function(s){ return '<td style="padding:4px 2px;text-align:center;border-bottom:1px solid var(--border);">'+s+'</td>'; }).join('')
-      + '<td style="padding:4px 2px;text-align:center;border-bottom:1px solid var(--border);font-weight:700;color:var(--gold2);">'+total+'</td>'
+  courseHoles.forEach(function(h, i) {
+    t += '<tr><td class="hole-num">'+h.no+'</td><td class="hole-num">'+h.par+'</td>'
+      + scRows.map(function(p, pi){
+          var v = (p.scores[i] !== undefined) ? p.scores[i] : h.par;
+          return '<td><input class="sc-cell" type="number" inputmode="numeric" min="1" max="20" id="sc-'+pi+'-'+i+'" value="'+v+'" onchange="scCellChange('+pi+','+i+',this)"/></td>';
+        }).join('')
       + '</tr>';
   });
-  tableHtml += '</tbody></table>';
+  t += '<tr class="sc-total-row"><td colspan="2" class="sc-total-lbl">합계</td>'
+    + scRows.map(function(p, pi){ return '<td id="sc-tot-'+pi+'"></td>'; }).join('')
+    + '</tr></tbody></table>';
 
   ov.innerHTML =
-    '<div style="flex:1;" onclick="this.parentElement.remove()"></div>'
-    + '<div style="background:var(--dark);border-radius:20px 20px 0 0;border-top:1px solid var(--border);max-height:85dvh;display:flex;flex-direction:column;">'
+    '<div style="flex:0 0 40px;" onclick="this.parentElement.remove()"></div>'
+    + '<div style="flex:1;min-height:0;background:var(--dark);border-radius:20px 20px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;">'
       + '<div style="flex-shrink:0;padding:16px 16px 8px;">'
         + '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>'
         + '<div style="font-size:15px;font-weight:600;color:var(--white);margin-bottom:4px;">📷 스코어 인식 결과</div>'
-        + '<div style="font-size:11px;color:var(--gray2);">내용을 확인하고 적용해주세요</div>'
+        + '<div style="font-size:11px;color:var(--gray2);">틀린 칸은 탭해서 바로 고친 뒤 적용하세요. 합계가 빨간색이면 카드의 TOTAL 과 다른 겁니다.</div>'
       + '</div>'
-      + '<div style="flex:1;min-height:0;overflow-x:auto;overflow-y:auto;padding:0 16px 8px;">'
-        + tableHtml
+      + '<div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 8px;">'
+        + t
       + '</div>'
       + '<div style="flex-shrink:0;padding:12px 16px 28px;display:flex;gap:8px;">'
         + '<button class="btn-outline" style="flex:1;padding:12px;font-size:13px;" onclick="document.getElementById(\'auto-confirm-overlay\').remove();startAutoScoring();">🔄 다시 찍기</button>'
@@ -2995,26 +3196,75 @@ function showScoreConfirm(players) {
       + '</div>'
     + '</div>';
   document.body.appendChild(ov);
+  scRows.forEach(function(_, pi){ scUpdateTotal(pi); });
   // 인식 결과를 onclick 속성에 문자열로 넣으면 JSON 안의 쌍따옴표가
   // 속성을 끊어버려서 버튼이 아무 반응도 하지 않는다. 데이터는 클로저로
   // 넘기고 핸들러를 직접 연결한다.
   document.getElementById('auto-score-apply').onclick = function() {
-    applyAutoScores(players);
+    applyAutoScores(scRows);
   };
 }
 
+function scCellChange(pi, hi, el) {
+  var n = parseInt(el.value, 10);
+  if (isNaN(n)) n = scRows[pi].scores[hi] || 1;
+  n = Math.max(1, Math.min(20, n));
+  el.value = n;
+  scRows[pi].scores[hi] = n;
+  scUpdateTotal(pi);
+}
+
+function scUpdateTotal(pi) {
+  var p = scRows[pi];
+  var tot = p.scores.reduce(function(s,v){ return s + (v||0); }, 0);
+  var el = document.getElementById('sc-tot-'+pi);
+  if (!el) return;
+  var mismatch = (p.total !== null && p.total !== undefined && p.total !== tot);
+  el.innerHTML = '<span style="color:'+(mismatch?'var(--red)':'var(--gold2)')+';">'+tot+'</span>'
+    + (mismatch ? '<div style="font-size:9px;font-weight:400;color:var(--red);">카드 '+p.total+'</div>' : '');
+}
+
+// 인식된 플레이어를 curScores 에 넣는다.
+// - 홀: 카드 순서 i → 코스 홀 번호 → curScores 에서 같은 holeNo (후반 시작이어도 안 어긋난다)
+// - 이름: normName 으로 비교, 못 찾은 사람끼리는 순서대로 짝지음, 그래도 남으면 새 플레이어로 추가
 function applyAutoScores(players) {
   var ov = document.getElementById('auto-confirm-overlay');
   if (ov) ov.remove();
+
+  var courseHoles = (curCourse && curCourse.holes) ? curCourse.holes : [];
+  var appNames = curPlayers.slice();
+  var usedApp = {};
+  var pairs = [];      // [aiPlayer, appName]
+  var leftoverAi = [];
+
   players.forEach(function(p) {
-    (p.scores || []).forEach(function(score, holeIdx) {
-      if (!curScores[holeIdx]) return;
-      var existing = curScores[holeIdx].scores.find(function(s){ return s.name === p.name; });
-      if (existing) {
-        existing.score = score;
-      } else {
-        curScores[holeIdx].scores.push({ name: p.name, score: score });
-      }
+    var key = normName(p.name);
+    var hit = appNames.find(function(n){ return !usedApp[n] && normName(n) === key; });
+    if (hit) { usedApp[hit] = true; pairs.push([p, hit]); }
+    else leftoverAi.push(p);
+  });
+  var leftoverApp = appNames.filter(function(n){ return !usedApp[n]; });
+  leftoverAi.forEach(function(p) {
+    var target = leftoverApp.shift();
+    if (!target) {
+      // 앱에 없는 사람 — 새 플레이어로 등록
+      target = p.name;
+      curPlayers.push(target);
+      curScores.forEach(function(hs){ hs.scores.push({ name: target, score: hs.par }); });
+    }
+    pairs.push([p, target]);
+  });
+
+  pairs.forEach(function(pr) {
+    var p = pr[0], name = pr[1];
+    (p.scores || []).forEach(function(score, i) {
+      var holeNo = courseHoles[i] ? courseHoles[i].no : (i + 1);
+      var hs = curScores.find(function(h){ return h.holeNo === holeNo; });
+      if (!hs) return;
+      var n = parseInt(score, 10);
+      if (isNaN(n)) return;
+      var entry = hs.scores.find(function(s){ return s.name === name; });
+      if (entry) entry.score = Math.max(1, Math.min(20, n));
     });
   });
   showCompleteScreen();
