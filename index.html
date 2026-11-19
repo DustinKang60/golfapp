@@ -9,7 +9,9 @@
 <meta name="apple-mobile-web-app-title" content="골프일기"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <link rel="manifest" href="/golfapp/manifest.json"/>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet"/>
+<!-- 웹폰트는 화면을 막지 않게 늦게 붙인다. 해외처럼 '신호는 있는데 데이터가 안 되는' 곳에서
+     이 요청이 응답 없이 매달리면, 일반 stylesheet 는 첫 화면을 통째로 막아 앱이 하얗게(검게) 보인다. -->
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet" media="print" onload="this.media='all'"/>
 <title>골프일기</title>
 <style>
 /* ===== 시작 홀 선택 버튼 ===== */
@@ -1037,10 +1039,13 @@ var PREV_SCREEN = {
 
 window.addEventListener('popstate', function(e) {
   // 1. 오버레이가 열려있으면 오버레이만 닫기
-  var removable = ['es-hole-picker', 'auto-confirm-overlay', 'edit-scores-modal', 'edit-info-modal', 'round-detail-overlay'];
+  var removable = ['photo-viewer', 'es-hole-picker', 'photo-preview-overlay', 'auto-confirm-overlay', 'edit-scores-modal', 'edit-info-modal', 'round-detail-overlay'];
   for (var ri = 0; ri < removable.length; ri++) {
     var rov = document.getElementById(removable[ri]);
-    if (rov) { rov.remove(); history.pushState({}, ''); return; }
+    if (!rov) continue;
+    // 스캔 결과는 비용을 들여 얻은 것이라 뒤로가기 한 번에 날리지 않는다
+    if (removable[ri] === 'auto-confirm-overlay' && !confirm('스캔 결과를 버리고 나갈까요?')) { history.pushState({}, ''); return; }
+    rov.remove(); history.pushState({}, ''); return;
   }
 
   var overlayIds = ['overlay-summary', 'overlay-add-companion'];
@@ -2099,7 +2104,9 @@ function toggleCompanionChip(el, name) {
   el.classList.toggle('active');
 }
 
-function startScoring() {
+// 라운드정보 화면의 입력값으로 curRoundInfo / curPlayers / orderedHoles / curScores 를 만든다.
+// 화면은 옮기지 않는다 — 사진 스캔 흐름은 결과를 확정할 때까지 라운드정보 화면에 머문다.
+function initRoundData() {
   var date    = document.getElementById('round-date').value;
   var teetime = document.getElementById('round-teetime').value;
   var temp    = document.getElementById('round-temp').value;
@@ -2138,17 +2145,23 @@ function startScoring() {
   document.getElementById('scoring-club-label').textContent = curClub.name;
   var startLabel = startHole==='back' ? curCourse.name+' (후반→전반)' : curCourse.name;
   document.getElementById('scoring-course-label').textContent = startLabel;
+}
 
-  showScreen('scoring');
-  renderHole();
+function startScoring() {
+  initRoundData();
 
-  // 시나리오 1(새 골프장 사진)에서 넘어온 스코어가 있으면 바로 확인창으로
+  // 시나리오 1(새 골프장 사진)에서 넘어온 스코어가 있으면 홀 화면 대신 결과 확인 화면으로
   if (pendingAutoScores) {
     var pending = pendingAutoScores;
     pendingAutoScores = null;
     setPendingScoreHint(false);
-    showScoreConfirm(pending);
+    showScoreConfirm(pending, pendingAutoPhoto);
+    pendingAutoPhoto = null;
+    return;
   }
+
+  showScreen('scoring');
+  renderHole();
 }
 
 /* ============================================================
@@ -2892,6 +2905,31 @@ function normalizeScores(raw, pars) {
 /* ============================================================
    카메라 캡처 공통
    ============================================================ */
+// 촬영한 사진을 API 에 보내기 전에 줄인다.
+// 폰 원본(3~5MB)은 API 이미지 한도(5MB)에 걸릴 수 있고, API 는 어차피 긴 변 1568px 로
+// 줄여서 보므로 그 이상 보내는 건 전송 시간만 늘린다. EXIF 회전은 브라우저가 처리한다.
+var PHOTO_MAX_EDGE = 1568;
+function downscalePhoto(file) {
+  return new Promise(function(resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function() {
+      var w = img.naturalWidth, h = img.naturalHeight;
+      var scale = Math.min(1, PHOTO_MAX_EDGE / Math.max(w, h));
+      var cw = Math.round(w * scale), ch = Math.round(h * scale);
+      var canvas = document.createElement('canvas');
+      canvas.width = cw; canvas.height = ch;
+      canvas.getContext('2d').drawImage(img, 0, 0, cw, ch);
+      URL.revokeObjectURL(url);
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      resolve({ dataUrl: dataUrl, base64: dataUrl.split(',')[1], mime: 'image/jpeg', w: cw, h: ch });
+    };
+    img.onerror = function() { URL.revokeObjectURL(url); reject(new Error('이미지를 읽을 수 없습니다')); };
+    img.src = url;
+  });
+}
+
+// 1단계 촬영 → 2단계 사진 확인. "스캔하기"를 눌러야 onCapture(base64, mime, dataUrl) 가 불린다.
 function openCamera(onCapture) {
   var input = document.createElement('input');
   input.type = 'file';
@@ -2900,16 +2938,43 @@ function openCamera(onCapture) {
   input.onchange = function(e) {
     var file = e.target.files[0];
     if (!file) return;
-    var reader = new FileReader();
-    reader.onerror = function() { showToast('❌ 이미지를 읽을 수 없습니다'); };
-    reader.onload = function(ev) {
-      var dataUrl = ev.target.result;
-      var base64 = dataUrl.split(',')[1];
-      onCapture(base64, file.type);
-    };
-    reader.readAsDataURL(file);
+    showAutoOverlay('사진 준비 중...');
+    downscalePhoto(file).then(function(photo) {
+      hideAutoOverlay();
+      showPhotoPreview(photo, onCapture);
+    }).catch(function(err) {
+      hideAutoOverlay();
+      showToast('❌ ' + err.message);
+    });
   };
   input.click();
+}
+
+// 사진 확인 화면 — 흐리거나 잘렸으면 여기서 다시 찍는다 (API 비용이 나가기 전)
+function showPhotoPreview(photo, onCapture) {
+  var old = document.getElementById('photo-preview-overlay');
+  if (old) old.remove();
+  var ov = document.createElement('div');
+  ov.id = 'photo-preview-overlay';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:var(--bg);display:flex;flex-direction:column;';
+  ov.innerHTML =
+    '<div class="topbar" style="flex-shrink:0;">'
+      + '<button class="topbar-back" id="pp-close">‹</button>'
+      + '<div class="topbar-title small">사진 확인</div>'
+      + '<div style="width:38px;"></div>'
+    + '</div>'
+    + '<div style="flex:1;min-height:0;display:flex;align-items:center;justify-content:center;padding:8px;background:#000;">'
+      + '<img src="'+photo.dataUrl+'" style="max-width:100%;max-height:100%;object-fit:contain;" alt="스코어카드 사진"/>'
+    + '</div>'
+    + '<div style="flex-shrink:0;padding:10px 16px 4px;font-size:12px;color:var(--gray);text-align:center;">숫자가 또렷하게 보이고 카드 전체가 들어왔는지 확인하세요</div>'
+    + '<div style="flex-shrink:0;padding:8px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;">'
+      + '<button class="btn-outline" id="pp-retake" style="flex:1;padding:14px 8px;font-size:13px;">🔄 다시 찍기</button>'
+      + '<button class="btn-gold" id="pp-scan" style="flex:1;padding:14px 8px;font-size:13px;">🔍 스캔하기</button>'
+    + '</div>';
+  document.body.appendChild(ov);
+  document.getElementById('pp-close').onclick = function(){ ov.remove(); };
+  document.getElementById('pp-retake').onclick = function(){ ov.remove(); openCamera(onCapture); };
+  document.getElementById('pp-scan').onclick = function(){ ov.remove(); onCapture(photo.base64, photo.mime, photo.dataUrl); };
 }
 
 /* ============================================================
@@ -2956,8 +3021,8 @@ var NEW_CLUB_SCHEMA = {
 
 function autoInputNewClub() {
   if (!loadApiKey()) { showToast('설정에서 API Key를 먼저 입력해주세요'); return; }
-  openCamera(function(base64, mimeType) {
-    showAutoOverlay('📷 스코어카드 분석 중...');
+  openCamera(function(base64, mimeType, dataUrl) {
+    showAutoOverlay('📷 스코어카드 스캔 중...');
     var prompt = '이 골프 스코어카드 사진을 분석해주세요.\n'
       + '골프장명, 코스명, 각 홀의 Par/Yard/HC(핸디캡), 그리고 모든 플레이어의 홀별 절대 타수를 읽어주세요.\n'
       + '전반 9홀·후반 9홀이 코스 이름별로 나뉘어 있으면 카드에 인쇄된 순서대로 1~18번으로 이어 붙이고, courseName 은 "전반코스·후반코스" 처럼 합쳐 적으세요.\n'
@@ -2969,6 +3034,7 @@ function autoInputNewClub() {
       // 파를 기준으로 타수 정규화 (상대값·문자열·null 정리)
       var pars = (parsed.holes || []).map(function(h){ return parseInt(h.par, 10) || 4; });
       (parsed.players || []).forEach(function(p){ p.scores = normalizeScores(p.scores, pars); });
+      parsed.photo = dataUrl;
       showNewClubConfirm(parsed);
     }).catch(function(err) {
       hideAutoOverlay();
@@ -3074,6 +3140,7 @@ function applyNewClubFromAI(parsed) {
   // 동반자 칸에는 나를 뺀 나머지 이름을 미리 채워 준다.
   if (parsed.players && parsed.players.length) {
     pendingAutoScores = parsed.players;
+    pendingAutoPhoto  = parsed.photo || null;
     var myKey = normName(player.name || '나');
     var others = parsed.players.map(function(p){ return p.name; })
       .filter(function(n){ return normName(n) !== myKey; });
@@ -3087,6 +3154,7 @@ function applyNewClubFromAI(parsed) {
    시나리오 2 — 기존 골프장: 카메라로 스코어만 자동입력
    ============================================================ */
 var pendingAutoScores = null;   // 시나리오 1 에서 넘어온 플레이어별 스코어 (startScoring 이 소비)
+var pendingAutoPhoto  = null;   // 그때 찍은 사진 (결과 화면에서 비교용)
 
 // 라운드정보 화면의 왼쪽 버튼 — 인식된 스코어가 대기 중이면 그걸 적용하는 버튼으로 바뀐다
 function setPendingScoreHint(on) {
@@ -3118,11 +3186,12 @@ var SCORES_SCHEMA = {
 function startAutoScoring() {
   if (!loadApiKey()) { showToast('설정에서 API Key를 먼저 입력해주세요'); return; }
   // 새 사진을 찍는 것이므로 시나리오 1 에서 남은 대기 스코어는 버린다
-  pendingAutoScores = null;
-  // 먼저 startScoring()으로 curScores 초기화
-  startScoring();
-  openCamera(function(base64, mimeType) {
-    showAutoOverlay('📷 스코어카드 분석 중...');
+  pendingAutoScores = null; pendingAutoPhoto = null;
+  setPendingScoreHint(false);
+  // 라운드정보 화면에 머문 채로 데이터만 준비 (플레이어 이름이 프롬프트에 필요하다)
+  initRoundData();
+  openCamera(function(base64, mimeType, dataUrl) {
+    showAutoOverlay('📷 스코어카드 스캔 중...');
     var playerNames = curPlayers.join(', ');
     // 카드 인쇄 순서(코스 홀 순서) 기준 파 목록 — 후반 시작이라도 카드는 1번부터다
     var courseHoles = (curCourse && curCourse.holes) ? curCourse.holes : [];
@@ -3139,7 +3208,7 @@ function startAutoScoring() {
       if (!parsed || !parsed.players || !parsed.players.length) { showToast('❌ 스코어를 인식하지 못했습니다'); return; }
       var pars = courseHoles.map(function(h){ return h.par; });
       parsed.players.forEach(function(p){ p.scores = normalizeScores(p.scores, pars); });
-      showScoreConfirm(parsed.players);
+      showScoreConfirm(parsed.players, dataUrl);
     }).catch(function(err) {
       hideAutoOverlay();
       showToast('❌ ' + err.message);
@@ -3153,12 +3222,13 @@ function startAutoScoring() {
 // 행 = 홀(카드 인쇄 순서), 열 = 플레이어. 18열 가로표는 폰에서 안 보여서 세로로 눕혔다.
 var scRows = [];   // 확인창에서 편집 중인 값 [{name, scores:[...]}]
 
-function showScoreConfirm(players) {
+function showScoreConfirm(players, photoUrl) {
   var old = document.getElementById('auto-confirm-overlay');
   if (old) old.remove();
   var ov = document.createElement('div');
   ov.id = 'auto-confirm-overlay';
-  ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,0.7);display:flex;flex-direction:column;overflow:hidden;';
+  // 전체 화면. 바깥을 잘못 눌러 스캔 결과가 날아가지 않도록 배경 탭으로는 닫히지 않는다.
+  ov.style.cssText = 'position:fixed;inset:0;z-index:9500;background:var(--bg);display:flex;flex-direction:column;overflow:hidden;';
 
   var courseHoles = (curCourse && curCourse.holes) ? curCourse.holes : [];
   scRows = players.map(function(p){ return { name: p.name, total: p.total, scores: (p.scores||[]).slice() }; });
@@ -3180,29 +3250,55 @@ function showScoreConfirm(players) {
     + '</tr></tbody></table>';
 
   ov.innerHTML =
-    '<div style="flex:0 0 40px;" onclick="this.parentElement.remove()"></div>'
-    + '<div style="flex:1;min-height:0;background:var(--dark);border-radius:20px 20px 0 0;border-top:1px solid var(--border);display:flex;flex-direction:column;">'
-      + '<div style="flex-shrink:0;padding:16px 16px 8px;">'
-        + '<div style="width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 14px;"></div>'
-        + '<div style="font-size:15px;font-weight:600;color:var(--white);margin-bottom:4px;">📷 스코어 인식 결과</div>'
-        + '<div style="font-size:11px;color:var(--gray2);">틀린 칸은 탭해서 바로 고친 뒤 적용하세요. 합계가 빨간색이면 카드의 TOTAL 과 다른 겁니다.</div>'
-      + '</div>'
-      + '<div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 8px;">'
-        + t
-      + '</div>'
-      + '<div style="flex-shrink:0;padding:12px 16px 28px;display:flex;gap:8px;">'
-        + '<button class="btn-outline" style="flex:1;padding:12px;font-size:13px;" onclick="document.getElementById(\'auto-confirm-overlay\').remove();startAutoScoring();">🔄 다시 찍기</button>'
-        + '<button id="auto-score-apply" class="btn-gold" style="flex:1;padding:12px;font-size:13px;">✅ 적용하기</button>'
-      + '</div>'
+    '<div class="topbar" style="flex-shrink:0;">'
+      + '<button class="topbar-back" id="sc-close">‹</button>'
+      + '<div class="topbar-title small">스캔 결과 확인</div>'
+      + (photoUrl ? '<button class="topbar-btn" id="sc-photo-btn" style="font-size:14px;">📷</button>' : '<div style="width:38px;"></div>')
+    + '</div>'
+    + '<div style="flex-shrink:0;padding:10px 16px 6px;">'
+      + '<div style="font-size:13px;color:var(--gold);">'+esc(curClub ? curClub.name : '')+(curCourse ? ' · '+esc(curCourse.name) : '')+'</div>'
+      + '<div style="font-size:11px;color:var(--gray2);margin-top:3px;">실물 스코어카드와 비교해 틀린 칸은 탭해서 고친 뒤 확정하세요. 합계가 빨간색이면 카드의 TOTAL 과 다른 겁니다.</div>'
+    + '</div>'
+    + '<div style="flex:1;min-height:0;overflow-y:auto;padding:0 16px 8px;">'
+      + t
+    + '</div>'
+    + '<div style="flex-shrink:0;padding:10px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;border-top:1px solid var(--border);">'
+      + '<button class="btn-outline" id="sc-retake" style="flex:1;padding:14px 8px;font-size:13px;">🔄 다시 찍기</button>'
+      + '<button class="btn-gold" id="auto-score-apply" style="flex:1;padding:14px 8px;font-size:13px;">✅ 확정</button>'
     + '</div>';
   document.body.appendChild(ov);
   scRows.forEach(function(_, pi){ scUpdateTotal(pi); });
-  // 인식 결과를 onclick 속성에 문자열로 넣으면 JSON 안의 쌍따옴표가
-  // 속성을 끊어버려서 버튼이 아무 반응도 하지 않는다. 데이터는 클로저로
-  // 넘기고 핸들러를 직접 연결한다.
+
+  // 데이터는 클로저로 넘기고 핸들러를 직접 연결한다 (onclick 속성에 JSON 을 넣으면 따옴표에 끊긴다)
+  document.getElementById('sc-close').onclick = function() {
+    if (confirm('스캔 결과를 버리고 나갈까요?')) ov.remove();
+  };
+  document.getElementById('sc-retake').onclick = function() {
+    if (!confirm('지금 결과를 버리고 다시 찍을까요?')) return;
+    ov.remove(); startAutoScoring();
+  };
+  if (photoUrl) document.getElementById('sc-photo-btn').onclick = function(){ showPhotoViewer(photoUrl); };
   document.getElementById('auto-score-apply').onclick = function() {
     applyAutoScores(scRows);
   };
+}
+
+// 결과 화면 오른쪽 위 📷 — 찍은 사진을 크게 띄워 결과와 대조한다 (핀치줌은 브라우저 기본)
+function showPhotoViewer(url) {
+  var old = document.getElementById('photo-viewer');
+  if (old) { old.remove(); return; }
+  var v = document.createElement('div');
+  v.id = 'photo-viewer';
+  v.style.cssText = 'position:fixed;inset:0;z-index:9600;background:rgba(0,0,0,0.95);display:flex;flex-direction:column;';
+  v.innerHTML =
+    '<div style="flex-shrink:0;display:flex;justify-content:space-between;align-items:center;padding:10px 16px;">'
+      + '<div style="font-size:13px;color:var(--gray);">찍은 사진</div>'
+      + '<button onclick="document.getElementById(\'photo-viewer\').remove()" style="background:none;border:none;color:var(--white);font-size:24px;line-height:1;">✕</button>'
+    + '</div>'
+    + '<div style="flex:1;min-height:0;overflow:auto;display:flex;align-items:center;justify-content:center;">'
+      + '<img src="'+url+'" style="max-width:100%;max-height:100%;object-fit:contain;" alt="스코어카드 사진"/>'
+    + '</div>';
+  document.body.appendChild(v);
 }
 
 function scCellChange(pi, hi, el) {
@@ -4228,11 +4324,10 @@ function searchRecords() {
     document.body.classList.add('light-mode');
   }
 
-  // 서비스워커 등록
+  // 서비스워커 등록 — 'load' 를 기다리지 않는다.
+  // 외부 요청(웹폰트)이 응답 없이 매달리면 'load' 가 영영 안 와서 등록·업데이트가 막힌다.
   if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-      navigator.serviceWorker.register('/golfapp/sw.js');
-    });
+    navigator.serviceWorker.register('/golfapp/sw.js');
   }
 
   // 히스토리 초기화
